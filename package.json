@@ -1,0 +1,53 @@
+{
+  "name": "medmin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/material": "^7.1.2",
+    "@mui/x-date-pickers": "^8.5.3",
+    "@prisma/client": "^6.9.0",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@reduxjs/toolkit": "^2.7.0",
+    "axios": "^1.8.4",
+    "class-variance-authority": "^0.7.1",
+    "cloudinary": "^2.6.0",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.13",
+    "firebase": "^11.6.0",
+    "firebase-admin": "^13.2.0",
+    "framer-motion": "^12.7.4",
+    "lucide-react": "^0.488.0",
+    "next": "15.3.0",
+    "papaparse": "^5.5.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-firebase-hooks": "^5.1.1",
+    "react-icons": "^5.5.0",
+    "react-redux": "^9.2.0",
+    "recharts": "^2.15.4",
+    "tailwind-merge": "^3.3.0",
+    "uuid": "^11.1.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/papaparse": "^5.3.16",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.0",
+    "prisma": "^6.9.0",
+    "tailwindcss": "^4",
+    "tw-animate-css": "^1.3.0",
+    "typescript": "^5"
+  }
+}

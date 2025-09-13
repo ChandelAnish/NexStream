@@ -1,0 +1,190 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// models
+model Admin {
+  id             String   @id @default(uuid())
+  managementType String
+  submittedAt    DateTime @default(now())
+
+  // Personal Info
+  fullName    String
+  email       String @unique
+  phone       String
+  designation String
+  
+  // Profile Photo - Cloudinary URL only
+  profilePhoto String?
+  
+  // Clinic Info
+  clinicName         String
+  clinicType         String
+  registrationNumber String
+  establishmentYear  String
+  address            String
+
+  // Documents Info
+  departments       String
+  doctorsCount      String
+  communicationMode String
+
+  // File Paths
+  governmentIdPath                    String?
+  governmentIdOriginalName            String?
+  registrationCertificatePath         String?
+  registrationCertificateOriginalName String?
+  accreditationPath                   String?
+  accreditationOriginalName           String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Doctor onboarding data
+model Doctor {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Personal Information
+  fullName     String
+  emailAddress String @unique
+  phoneNumber  String
+  dateOfBirth  String
+  gender       String
+
+  // Profile Photo - Cloudinary URL only
+  profilePhoto String?
+
+  // Professional Details
+  medicalLicenseNumber         String
+  specialization               String
+  yearsOfExperience            String
+  associatedClinicHospitalName String
+  consultationType            String
+
+  //Education Details
+  medicalSchoolName           String?
+  medicalSchoolGraduationYear String?
+  medicalSchoolDegree         String?
+
+  // Verification Documents - Cloudinary URLs only
+  governmentIssuedId                    String?
+  medicalDegreeCertificate              String?
+  medicalCouncilRegistrationCertificate String?
+  experienceCertificate                 String?
+
+  // Work Schedule Preferences
+  availableConsultationHours  String
+  preferredModeOfConsultation String
+  languageSpoken              String
+  additionalInformation       String?
+  emergencyContactDetails     String
+  personalBio                 String?
+
+  // Status and Verification
+  // isVerified Boolean @default(false)
+  // isActive   Boolean @default(true)
+  @@map("doctors")
+}
+
+model Patient {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  phone       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  supabaseUid String    @unique
+
+  // Demographic Data (embedded in User model)
+  title         String?
+  name          String?
+  birthDate     DateTime?
+  gender        String?
+  bloodGroup    String?
+  height        Int?
+  weight        Int?
+  maritalStatus String?
+  contactNumber String?
+  alternateNumber String?
+
+  // Lifestyle Data (embedded in User model)
+  smokingHabit       String?
+  alcoholConsumption String?
+  activityLevel      String?
+  dietHabit          String?
+  occupation         String?
+
+  // Medical Data (embedded in User model)
+  allergies       String[] @default([])
+  medications     String[] @default([])
+  chronicDiseases String[] @default([])
+  injuries        String[] @default([])
+  surgeries       String[] @default([])
+}
+
+
+// payment model
+model Payment {
+  id             Int      @id @default(autoincrement()) // corresponds to PID
+  avatarUrl      String?   // Cloudinary URL for profile picture
+  payerName      String    // e.g., Ankit Wind
+  amount         Decimal   @db.Decimal(15,2) // supports large amounts like $150,000
+  paymentDate    DateTime  // 10-Apr-2022/13:00pm
+  receiveDate    DateTime  // 10-Apr-2022/13:00pm
+  transactionId  String    // *13110
+  paymentMode    PaymentMode
+  status         PaymentStatus
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+enum PaymentMode {
+  Cash
+  Online
+}
+
+enum PaymentStatus {
+  Failed
+  Paid
+  Refunded
+  Cancel
+  Pending
+}
+
+// user-access model
+model UserAccess {
+  id           Int           @id @default(autoincrement())
+  name         String        // e.g., Ankit Wind
+  department   Department
+  dateOfJoin   DateTime
+  accessLevel  AccessLevel
+  status       UserStatus
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+enum Department {
+  Manager
+  Doctor
+  Nurse
+  Stuff
+}
+
+enum AccessLevel {
+  Full
+  Partial
+  Non
+}
+
+enum UserStatus {
+  Active
+  Inactive
+}
