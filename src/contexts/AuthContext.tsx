@@ -49,6 +49,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Redirect to login if user is not authenticated and trying to access a protected route
         router.push(`/sign-in?returnUrl=${encodeURIComponent(pathname || '')}`); // returnUrl — so we remember where they wanted to go, and can bring them back after login.
       }
+      if(user && isPublicRoute){
+        router.push(`/dashboard`);
+      }
     });
 
     // Clean up subscription

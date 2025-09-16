@@ -49,7 +49,7 @@ export default function SignInForm() {
       const authenticatedUser = await signInWithEmailAndPassword(auth, email, password)
       console.log(authenticatedUser.user)
       dispatch(setEmail(authenticatedUser.user.email || "priya.sharma@example.com")); 
-      router.push(returnUrl ?? '/')
+      router.push(returnUrl ?? '/dashboard')
     } catch (err) {
       console.error(err)
       const authError = err as AuthError

@@ -182,7 +182,7 @@ useEffect(() => {
       window.sessionStorage.removeItem('signupFormData')
       window.sessionStorage.removeItem('verifiedEmails')
       
-      router.push('/clinic-onboarding')
+      router.push('/dashboard')
     } catch (err: unknown) {
       if (err instanceof Error) {
         const authError = err as AuthError;

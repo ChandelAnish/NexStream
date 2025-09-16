@@ -2,13 +2,13 @@
 
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { 
   Play, 
   Video, 
   Users, 
   Gamepad2, 
   Briefcase, 
-  Star, 
   ArrowRight, 
   CheckCircle,
   Zap,
@@ -18,12 +18,17 @@ import {
 
 const LandingPage = () => {
   const [mounted, setMounted] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) return null;
+
+  const handleGetStarted = (): void => {
+    router.push('/sign-up');
+  };
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -82,15 +87,6 @@ const LandingPage = () => {
     }
   ];
 
-  const benefits = [
-    "Ultra-low latency streaming",
-    "Cross-platform compatibility",
-    "Professional-grade security",
-    "24/7 reliable uptime",
-    "Advanced analytics dashboard",
-    "Custom branding options"
-  ];
-
   return (
     <div className="min-h-screen relative">
       {/* Hero Section */}
@@ -119,7 +115,7 @@ const LandingPage = () => {
               The next-gen hub for streaming, video calling, and squad communication
             </p>
             <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
-              Fast, reliable, and built for both gamers and professionals
+              Whether you&apos;re streaming games or hosting professional meetings, NexStream delivers the performance you need
             </p>
           </motion.div>
 
@@ -128,6 +124,7 @@ const LandingPage = () => {
             className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
           >
             <motion.button
+              onClick={handleGetStarted}
               className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold rounded-xl flex items-center gap-2 hover:shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
@@ -138,8 +135,9 @@ const LandingPage = () => {
               className="px-8 py-4 border border-gray-600 text-gray-300 font-semibold rounded-xl hover:border-gray-500 hover:text-white transition-all duration-300"
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
+              onClick={()=>router.push('/sign-in')}
             >
-              Watch Demo
+              Sign in
             </motion.button>
           </motion.div>
 
@@ -186,7 +184,7 @@ const LandingPage = () => {
               Built for Everyone
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Whether you're streaming games or hosting professional meetings, NexStream delivers the performance you need
+              Whether you&apos;re streaming games or hosting professional meetings, NexStream delivers the performance you need
             </p>
           </motion.div>
 
@@ -314,6 +312,7 @@ const LandingPage = () => {
             Join thousands of gamers and professionals who trust NexStream for their streaming and communication needs.
           </p>
           <motion.button
+            onClick={handleGetStarted}
             className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-lg rounded-xl hover:shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.95 }}
