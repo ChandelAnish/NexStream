@@ -15,6 +15,8 @@ import {
   Wifi,
   WifiOff
 } from 'lucide-react';
+import { useRouter } from 'next/navigation'
+
 
 interface RecentCall {
   id: string;
@@ -43,6 +45,7 @@ interface UpcomingEvent {
 
 const Dashboard: React.FC = () => {
   const [currentTime, setCurrentTime] = useState<string>('');
+  const router = useRouter();
 
   const [recentCalls] = useState<RecentCall[]>([
     { id: '1', name: 'Team Strategy Call', type: 'group', participants: 5, duration: '45m', time: '2h ago' },
@@ -148,6 +151,7 @@ const Dashboard: React.FC = () => {
 
   const handleMeeting = (): void => {
     console.log('Meeting');
+    router.push('/videoCalling');
   };
 
   const handleStreaming = (): void => {
@@ -227,19 +231,19 @@ const Dashboard: React.FC = () => {
                   icon={<Phone className="w-8 h-8" />}
                   title="Audio Call"
                   onClick={handleAudioCall}
-                  gradient="from-green-500 to-emerald-600"
+                  gradient="from-green-500 to-emerald-600 cursor-pointer"
                 />
                 <TopButton
                   icon={<Users className="w-8 h-8" />}
                   title="Meeting"
                   onClick={handleMeeting}
-                  gradient="from-blue-500 to-indigo-600"
+                  gradient="from-blue-500 to-indigo-600 cursor-pointer"
                 />
                 <TopButton
                   icon={<Video className="w-8 h-8" />}
                   title="Streaming"
                   onClick={handleStreaming}
-                  gradient="from-purple-500 to-pink-600"
+                  gradient="from-purple-500 to-pink-600 cursor-pointer"
                 />
               </motion.div>
 
