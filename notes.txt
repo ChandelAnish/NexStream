@@ -321,13 +321,13 @@ Uses .mpd files (instead of .m3u8) to describe the chunks.
                         - RTMP = input only (user → server).
                         - HLS/DASH/WebRTC = output to viewers.
 
-        🔹 Typical Live Streaming Flow
+        🔹 Typical Live Streaming Flow:
 
-        Streamer (OBS / Camera / Browser)
-        ↓   (RTMP)
-        Ingest Server (YouTube, Twitch, etc.)
-        ↓   (transcoding to HLS/DASH/WebRTC)
-        Viewers (browser / phone / TV)
+                Streamer (OBS / Camera / Browser)
+                ↓   (RTMP)
+                Ingest Server (YouTube, Twitch, etc.)
+                ↓   (transcoding to HLS/DASH/WebRTC)
+                Viewers (browser / phone / TV)
 
 
         ✅ So, in simple words:
@@ -339,3 +339,64 @@ Uses .mpd files (instead of .m3u8) to describe the chunks.
 RTMP → the delivery truck: it carries your live video from your PC to YouTube’s servers.
 HLS/DASH → the supermarket shelves: videos are chopped, packaged, and put out for millions of viewers to pick up chunk by chunk.
 -----------
+
+
+
+
+
+
+
+
+------------
+📦 In VOD, how video goes to the server
+1️⃣ Upload instead of stream
+
+        - In VOD, the video is pre-recorded (e.g., mygame.mp4).
+        - You don’t stream it in real-time.
+        - Instead, you upload the whole file to the server (like uploading a photo).
+
+        👉 Example:
+        When you upload a video to YouTube, it first shows “uploading…” — that’s the VOD upload step.
+
+2️⃣ Methods to send video
+
+        -> HTTP Upload (most common)
+
+                - Your browser/app sends the file over HTTP/HTTPS.
+                - Usually via a POST request with multipart/form-data.
+                - Server receives it and saves it (disk, object storage like S3).
+
+        -> Resumable Upload (for large files)
+
+                - Breaks video into chunks.
+                - Uploads chunks one by one.
+                - If upload fails midway, it can resume from last chunk.
+                - Example: YouTube and Google Drive use this.
+
+        -> Direct-to-Object Storage
+
+                - Instead of hitting your backend first, the client uploads video directly to S3/GCS/Azure Blob using a signed URL.
+                - Faster and avoids overloading your main server.
+
+3️⃣ After Upload
+
+        -> The raw video file now sits on your server (or storage bucket).
+        -> Then, your backend triggers FFmpeg (or a transcoding service) to:
+                - Convert it into H.264 + AAC (standard codecs).
+                - Slice it into chunks (.ts files).
+                - Generate playlists (.m3u8 for HLS).
+        -> After this, it’s ready for streaming to viewers.
+
+✅ Key Difference from Live
+
+        - Live streaming (RTMP/WebRTC) → sends data continuously in real time.
+        - VOD (upload) → sends the whole file first, then processes and delivers later.
+
+        👉 That’s why in VOD, you can pause, rewind, or skip — because the full video is available after upload + processing.
+
+⚡ Example in Your VOD App:
+
+        User → (HTTP upload POST /upload) → Server/Storage
+        → Server triggers FFmpeg → HLS/DASH files created
+        → Stored on CDN/Storage → Viewer plays via .m3u8
+------------
