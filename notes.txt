@@ -1,536 +1,341 @@
-import { Geist, Geist_Mono } from "next/font/google";  --> This line brings in two fonts – Geist and Geist Mono – from Google Fonts using Next.js’s built-in support.
+🎥 Types of Streaming
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+        1️⃣ On-Demand Streaming (VOD – Video on Demand)
 
-        - Geist(...) → Loads the Geist Sans font.
-        - variable: "--font-geist-sans" → Saves the font into a CSS variable so we can use it later in styles.
-        - subsets: ["latin"] → Only loads letters used in English and similar languages to reduce size.
+                -> Content is pre-recorded.
+                -> Stored on servers and delivered in chunks (HLS, DASH).
+                -> User can pause, rewind, skip ahead.
+                👉 Examples: YouTube videos, Netflix, Disney+, Spotify songs.
 
-className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        - Adds the Geist Sans font via CSS variable.
-        - Adds the Geist Mono font via CSS variable.
-        - antialiased → Makes text smoother and easier to read.
+        2️⃣ Live Streaming
 
+                -> Content is captured and transmitted in real time.
+                -> Viewers watch as it happens, with small delay (latency).
+                -> Uses RTMP → HLS/DASH/WebRTC to reach viewers.
+                👉 Examples: Twitch, YouTube Live, football match broadcast, live webinars.
 
+        3️⃣ Audio Streaming
 
+                -> Focused only on audio data (music, podcasts, radio).
+                -> Works similarly to video streaming but lighter.
+                👉 Examples: Spotify, Apple Music, online radio.
 
-In TypeScript, Readonly is a utility type that makes all the properties of an object immutable, meaning they cannot be changed after they are set. It ensures that the object is treated as read-only, which helps prevent accidental modifications.
+        4️⃣ Game/Screen Streaming
 
-    Why is it used here?
-        In your code, Readonly<{ children: React.ReactNode }> is used to make the children property immutable. This means that inside the RootLayout component, you cannot accidentally reassign or modify the children prop. It enforces the idea that props passed to a React component should not be changed.
+                -> Captures your screen/gameplay and streams it live to others.
+                -> Requires low latency so viewers don’t see big delays.
+                👉 Examples: Twitch gaming streams, Discord screen share, Google Stadia (cloud gaming).
 
-    Example to clarify:
-    Why is this useful?
-        Immutability: It ensures that props or objects are not accidentally modified, which aligns with React's principle of immutability.
-        
-        Code Safety: It makes your code safer and easier to debug by preventing unintended side effects.
-        In your case, using Readonly ensures that the children prop passed to RootLayout remains unchanged, which is a good practice for React components.
+        5️⃣ Real-Time Communication (RTC)
 
+                -> Interactive streaming where people send/receive audio + video both ways.
+                -> Requires ultra-low latency (<1s).
+                -> Usually built on WebRTC.
+                👉 Examples: Zoom, Google Meet, video calls, online classes.
 
-generator client {
-  provider = "prisma-client-js"
-  output   = "../node_modules/.prisma/client"
-}
-        ** you need to add an output property since starting with Prisma 7.0.0, specifying this path will be mandatory. 
-        ** The path "../node_modules/.prisma/client" is the default location where Prisma generates its client, so this change just makes it explicit rather than relying on the default behavior.
+        6️⃣ Progressive Download (not true streaming, but often confused)
 
+                -> Video/audio file is downloaded from start → end.
+                -> Can start playing before fully downloaded.
+                -> No adaptive bitrate, less efficient than HLS/DASH.
+                👉 Example: Watching an MP4 directly from a web link.
+--------------
 
-what is difference between .env and .env.local file ?
-    .env	    --> Shared config for all devs/envs
-    .env.local	--> Dev-specific or secret overrides. It overrides values in .env
 
 
-**  In Next.js, using the NEXT_PUBLIC_ prefix in your .env variables is not always necessary, but it is required if you want to access the variable in the browser (client-side). If you want to use the environment variable on the frontend (in React components, etc.), you must prefix it with NEXT_PUBLIC_
 
 
 
-const [createUserWithEmailAndPassword, user, loading, error] = useCreateUserWithEmailAndPassword(auth)
-        createUserWithEmailAndPassword → a function to create a user with email + password
-        user → info about the signed-up user (if successful)
-        loading → true while the request is in progress
-        error → any error that happens during signup
 
 
-** OAuth (short for Open Authorization) is an open standard authorization protocol that allows one application to access data from another application without exposing user credentials (like username or password).
-OAuth lets you log into one app using another app safely.
 
-        Example:
-        When you click "Sign in with Google" on a website — that website doesn’t get your Google password.
-        Instead, Google verifies you and tells the website:
-        ✅ "Yes, this user is valid, and here’s some basic info (like name and email)."
 
-        🔐 Key Roles in OAuth:
+🎬 Full Flow of VOD System
 
-                -> User	                - The person using the app
-                -> Client               - The app requesting access (like your website)
-                -> Authorization Server	- The system that checks the user (e.g., Google, Facebook)
-                -> Resource Server      - Where the data lives (e.g., user’s email, profile, etc.)
-                -> Access Token	        - A temporary key that gives access to protected data without a password
 
+        1️⃣ Upload Stage (Content Creation)
 
------
+        User/Streamer uploads a video file (.mp4, .mov, etc.) to your system.
+        This is just the raw file — not yet optimized for streaming.
+        👉 Example: You upload mygame.mp4.
 
-const sendOtp = async () => {
-  if (!recaptchaRef.current) {
-    recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible',
-      callback: () => {
-        console.log('reCAPTCHA solved')
-      },
-    })
-  }
-}
-                Checks if reCAPTCHA is already created (!recaptchaRef.current)
-                If not, it creates a new RecaptchaVerifier from Firebase.
-                        - auth                  : your Firebase auth instance.
-                        - 'recaptcha-container' : the HTML element where reCAPTCHA attaches.
-                        - size: 'invisible'     : means the reCAPTCHA won't be shown visually (it runs silently).
-                        - callback              : runs once the reCAPTCHA is successfully solved.
+        2️⃣ Processing Stage (Transcoding & Packaging)
 
-                Firebase requires reCAPTCHA before sending OTPs for security reasons:
-                        - 🛡️ Prevents abuse	Stops bots from spamming OTP requests.
-                        - ⚠️ Cost control	OTPs cost money. reCAPTCHA helps make sure only real users trigger them.
+        FFmpeg (or another encoder) takes the raw file and:
+                1) Transcodes it into standard codecs:
+                        -> Video → H.264 (for wide compatibility)
+                        -> Audio → AAC
 
+                2) Creates multiple bitrates/resolutions:
 
-const result = await signInWithPhoneNumber(auth, phone, recaptchaRef.current)
-        - auth                  : your Firebase authentication instance.
-        - phone                 : the phone number you entered (e.g., +91xxxxxxxxxx).
-        - recaptchaRef.current  : the reCAPTCHA verifier that ensures it's a human.
+                        -> 1080p (high quality)
+                        -> 720p (medium)
+                        -> 480p (low, for slow internet)
 
-        It returns a confirmationResult object.
-        This object contains a method called .confirm(userOTP), which you use later to verify the OTP entered by the user.
+                3) splits video into chunks (small .ts files, e.g., 4–10 seconds each).
 
--------
+                4) Generates playlist(s) (.m3u8 for HLS or .mpd for DASH).
 
-The line ref={(el) => { inputRefs.current[index] = el; }} is using React's ref system to create references to DOM elements. Let me break it down in detail:
+        👉 Output looks like this:
 
-What it does:
-        This code creates a direct reference to each input field in your OTP form, storing these references in an array so you can access and manipulate them programmatically.
+        master.m3u8     ← points to all qualities
+        1080p.m3u8      ← lists 1080p chunks
+        720p.m3u8
+        480p.m3u8
+        segment0.ts
+        segment1.ts
+        segment2.ts
+        ...
 
-How it works step by step:
+        3️⃣ Storage & Distribution
 
-        1. React's ref prop:
+                - All these files (chunks + playlists) are saved on:
+                        -> Your server, or
+                        -> A CDN (Content Delivery Network) like AWS CloudFront, Cloudflare, Akamai.
+                - Since it’s just HTTP files, it can be delivered at scale easily.
 
-                - The ref prop in React lets you get a reference to the actual DOM element that gets rendered
-                - Instead of passing a ref object directly, you're using a callback function approach
+        4️⃣ Playback (Viewer Side)
 
+        - The user opens your app/website.
+        - The video player (like hls.js in a React/Next.js frontend) loads the master.m3u8.
+        - The player:
+                -> Reads which qualities (1080p, 720p, etc.) are available.
+                -> Picks one based on internet speed.
+                -> Starts downloading small .ts chunks in order.
+                -> If bandwidth drops, it auto-switches to lower quality (adaptive bitrate).
 
-        2. Callback function:
+        👉 To the viewer, it looks like a smooth YouTube-style experience.
 
-                (el) => { inputRefs.current[index] = el; } is a callback function that React calls when:
+        5️⃣ User Experience
 
-                        - The component is mounted (with the actual DOM element as el)
-                        - The component is unmounted (with null as el)
+                -> Can pause, rewind, seek (because the whole file exists).
+                -> Smooth playback because only small chunks are streamed at a time.
+                -> Adaptive streaming ensures minimal buffering.
 
-        3. Parameter el:
+        ✅ Summary Flow (Step by Step)
 
-                - el is the actual DOM element (an <input> in this case) when the component renders
-                - el becomes null when the component unmounts
+        [Uploader]
+        ↓ (raw video)
+        [Server: FFmpeg]
+        - Transcode → H.264 + AAC
+        - Multi-quality → 1080p/720p/480p
+        - Chunking → segment0.ts, segment1.ts…
+        - Playlist → .m3u8 (HLS)
+        ↓
+        [Storage/CDN]
+        - Stores chunks + playlists
+        ↓
+        [Viewer Player (hls.js)]
+        - Loads master.m3u8
+        - Fetches .ts chunks over HTTP
+        - Plays video, adapts quality
 
 
-        4. Storage in inputRefs:
+        👉 In one sentence:
+        VOD = Upload video → Server processes into streaming format → Store as chunks + playlist → Player downloads & plays smoothly.
 
-                - inputRefs is a React useRef object created earlier with:
-                        const inputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null, null, null])
 
-                - inputRefs.current is the mutable array that persists between renders
-                - inputRefs.current[index] = el stores each input element at its corresponding index position
 
 
-        5. The curly braces:
 
-                -{ inputRefs.current[index] = el; } uses block syntax to make sure the function doesn't return anything
-                -This addresses TypeScript's requirements for ref callbacks to have a void return type
 
-----
-import { fetchSignInMethodsForEmail } from 'firebase/auth'
-const methods = await fetchSignInMethodsForEmail(auth, email)
 
 
-        - fetchSignInMethodsForEmail is a method from the firebase/auth module in Firebase that lets you check which sign-in methods are available for a given email address.
 
-        It's useful in scenarios like:
-                - Determining whether a user has already registered.
-                - Checking if a user signed up using Google/Facebook instead of email/password.
-                - Preventing duplicate sign-ups and guiding users correctly.
 
-        Parameters:
-                - auth: The initialized Firebase auth object.
-                - email: A string containing the user’s email address.
 
-        Returns:
-                A Promise<string[]> that resolves to an array of sign-in method identifiers like:
-                        "password" – Email/Password
-                        "google.com" – Google sign-in
-                        "facebook.com" – Facebook sign-in
-                        "twitter.com", "github.com", etc.
 
 
--------
-createAsyncThunk:
-        createAsyncThunk is a function that helps you handle async operations (like API calls) in Redux, without writing tons of boilerplate.
 
-        Why do we need it?
-                Normally in Redux, handling something like fetching data from an API means:
-                        - Dispatching a "loading" action.
-                        - Then dispatching a "success" or "error" action depending on the result.
-                        - Writing reducers for each step.
+-----------
+🎬 What is an MP4 file?
 
-        But that’s a lot of work!
-                With createAsyncThunk, Redux Toolkit automates all of this for you.
+MP4 = “MPEG-4 Part 14”
+It’s a container format → like a box that holds different types of media.
+Inside an MP4, you can have:
 
+        -> Video (usually H.264, H.265, VP9…)
+        -> Audio (usually AAC, MP3…)
+        -> Subtitles (captions)
+        -> Metadata (title, duration, thumbnail, etc.)
 
+👉 Think of MP4 as a folder in one file that packs video + audio + extras together neatly.
 
-        getState():
+🎞 What is a MOV file?
 
-                What is getState()?
-                        getState() is a function you get inside Redux Thunks (like createAsyncThunk) that lets you read the current state of your Redux store.
+        -> MOV = Apple QuickTime Movie format.
+        -> Also a container format, just like MP4.
+        -> Developed by Apple → works best in Mac/iOS/QuickTime ecosystem.
+        -> Stores the same kinds of things: video, audio, subtitles, metadata.
 
+🔑 Difference Between MP4 and MOV
 
-                Simple Analogy:
-                        Think of Redux as a big storage box holding all your app's data (like form inputs, user info, etc.).
+        Feature 	        MP4	                                        MOV
 
-                        getState() is like saying:
-                        👉 “Hey Redux, show me what’s in the box right now.”
+        Origin  	        Standard (MPEG group)	                        Apple (QuickTime)
+        Compatibility           Works everywhere (web, PC, mobile, TV)	        Best on Apple devices/software
+        File size	        Usually smaller (more compressed)	        Larger (less compressed, higher quality)
+        Usage   	        Streaming, sharing, web videos	                Professional video editing (Final Cut, iMovie)
 
+👉 Example:
 
-                ** getState() gives you the entire Redux state — meaning all slices.
-                getState() gives you access to your current Redux state.
-
-
-                const state = getState() as { admin: AdminState };
-                        You're telling TypeScript:
-                                "Hey, out of the whole Redux state, I'm only interested in the admin slice right now."
-
-
-                If you ever have multiple slices and want to access more than one, just grab them like:
-                        const state = getState();
-                        const adminData = state.admin;
-                        const userData = state.user;
-
-
-        rejectWithValue():
-
-                rejectWithValue is used in createAsyncThunk to send a custom error message when your async function fails.
-
-                Normally, when something goes wrong in a createAsyncThunk, it just throws a generic error. But with rejectWithValue, you can return a specific error message to the rejected case.
-
-                eg: 
-                export const fetchData = createAsyncThunk(
-                  'data/fetch',
-                  async (_, { rejectWithValue }) => {
-                    try {
-                      const res = await axios.get('/api/data');
-                      return res.data;
-                    } catch (err) {
-                      // Send custom error to reducer
-                      return rejectWithValue('Something went wrong while fetching data!');
-                    }
-                  }
-                );
-
-
-
-        here _ is for arg in : async (_, { rejectWithValue })
-                When you define a thunk using createAsyncThunk, the first parameter in the async function is called arg. It’s the value you pass when you call the thunk.
-
-                eg: 
-                export const fetchUser = createAsyncThunk(
-                  'user/fetchUser',
-                  async (userId, thunkAPI) => {
-                    const response = await axios.get(`/api/users/${userId}`);
-                    return response.data;
-                  }
-                );
-
-                When you call this thunk: 
-                        dispatch(fetchUser('123'));
-
-                arg will be '123' i.e userId (a.k.a. arg) will be '123'
-
-
-        What is thunkAPI in createAsyncThunk?
-                When you write a thunk using createAsyncThunk, the second parameter in the async function is called thunkAPI.
-
-                It gives you some built-in tools that you can use inside the thunk.
-                The thunkAPI object includes:
-
-                        - dispatch        	: Dispatch other actions from inside the thunk
-                        - getState        	: Access the current Redux state
-                        - rejectWithValue 	: Return a custom error when something goes wrong
-                        - extra           	: For injecting dependencies (advanced use)
-                        - requestId       	: Unique ID for the thunk request
-                        - signal  	        : Used for cancelling requests (like aborting fetch calls)
-
-        
-        ** fetchUser('123') is an async thunk, and async thunks return a function, not just plain data. Redux doesn’t automatically run functions — it only works with actions. So we have to dispatch that thunk manually.
-
-        ** When you return something from the createAsyncThunk async function like this:
-                return response.data;
-                That value gets automatically passed to your Redux slice's fulfilled case.
-
----------
-What is “Serializable”?
-        Serializable means:
-                Data that can be safely converted to JSON and stored in Redux or sent over a network.
-
-        🔹 Examples of serializable data:
-
-                Strings ("hello")
-                Numbers (123)
-                Booleans (true/false)
-
-        Plain objects ({ name: "Anish" })
-
-        🔹 Examples of non-serializable data:
-
-                JavaScript File objects (like images, PDFs, etc.)
-                Functions
-                DOM elements
-                Dates (sometimes)
-
-        - Redux expects all state and actions to be serializable so it can debug and track them safely.
-        - You can’t store the actual File object in Redux because it’s non-serializable.
-        - So instead, you extract basic info (name, size, type) from the file and store that in Redux.
-
-
-
-** fileType as keyof typeof formErrors : 
-        1. typeof formErrors - This gives you the type of the formErrors object
-                eg:     {
-                          name: string;
-                          email: string;
-                          password: string;
-                        }
-
-        2. keyof (typeof formErrors) - This extracts all the keys from that type.
-                eg: 'name' | 'email' | 'password'
-        
-        3. as (keyof (typeof formErrors)) - This part is a type assertion. You're telling TypeScript: "I know this variable is one of the valid keys in formErrors, so treat it as such."
-
-                eg: fileType as 'name' | 'email' | 'password'
-
-        You're just assuring TypeScript that:
-                - fileType really is one of the keys: 'name' | 'email' | 'password'
-                - And it's safe to use it as a key.
-
-
-
-----
-Are we allowed to dispatch actual File objects using createAsyncThunk?
-        ✅ Yes, but only with one important condition:
-        👉 You should not store them in Redux state.
-
-
-Object.entries() --> this method returns an array of the key/value pairs of an object.
-
-
-----
-Files Can't Be Sent as JSON
-Normally when you send data via axios.post('/api', data), you send it as JSON:
-
-{
-  name: "Anish",
-  profilePicture: someFile // ❌ This will break if it's a File object
-}
-But JSON cannot handle binary data like images or PDFs. So if you try to send a File in a JSON object, it either:
-
-throws an error,
-
-or silently fails (the file doesn’t arrive at the server).
-
------
-If you want to use an env variable in middleware.ts then move it to a NEXT_PUBLIC_ one.
-
-        Next.js middleware runs on the Edge Runtime, not Node.js. That means:
-                - It runs in a lightweight isolated environment.
-                - Only specific environment variables are available — and only if they're prefixed with NEXT_PUBLIC_ and set at build time.
-
-
------
-const response = NextResponse.next(); // NextResponse.next() tells Next.js to continue processing the request as usual. You're using response to modify the outgoing headers before continuing.
-
-export const config = {
-  matcher: '/api/:path*', // This means: The middleware only runs for any API route, like: /api/something,  /api/users/123,  etc.
-};
-
-
------
-**create or write to a folder is not allowed in vercel since vercel’s serverless functions are read-only — except for the /tmp directory.
-
-
--------
-What is createContext?
-
-        createContext is a React function used to share data (like auth state, theme, language, etc.) across many components without passing props manually at every level.
-
-
-        Imagine you have a big React app with many components.
-        Normally, to pass data (like a logged-in user or theme) to a child component, you'd use props like this:
-
-                        <App user="Anish">
-                          <Page>
-                            <Header>
-                              <UserInfo user="Anish" />
-                            </Header>
-                          </Page>
-                        </App>
-
-        This is called prop drilling — passing props through many layers. It gets messy. createContext helps avoid that With Context, you can do:
-
-                        <App>
-                          <Page>
-                            <Header>
-                              <UserInfo />
-                            </Header>
-                          </Page>
-                        </App>
-        But UserInfo can still access the user, without needing it passed down! 🎉
-
-        - What does createContext do?
-        It lets you:
-                - Create a "box" to hold some shared data.
-                - Wrap parts of your app in a Provider to give access to that data.
-                - Use a hook (useContext) to read the data from anywhere inside that box.
-
-
-        Syntax:
-                const MyContext = createContext(defaultValue);
-
-        - Provide the context value:
-                We now wrap our app (or part of it) in a Provider and pass the user:
-
-                        <UserContext.Provider value={user}>
-                          <Dashboard />
-                        </UserContext.Provider>
-
-        - Use the context value:
-                        function Dashboard() {
-                          const user = useContext(UserContext);
-                          return <h1>Welcome, {user}!</h1>;  // Will show: Welcome, Anish!
-                        }
-
-
-        createContext()      :   Creates a shared box for data
-        Provider             :   Lets you put data into the box
-        useContext()         :   Lets you take data out of the box in child components
-
-
-
-
-
-⚠️ [Fast Refresh] performing full reload :
-
-        ❓ What's the message saying?
-        React is trying to hot reload your app (reload just the part you changed), but it can't — so it's doing a full reload of the entire page.
-
-        🧠 Why?
-                -> Because in one of your files, you're doing two things in the same file:
-                -> Exporting a React component (like a layout or page)
-                -> Exporting other stuff (like constants, functions, or context)
-                -> And that other stuff is being used somewhere outside React (like in a helper file).
-
-        💥 This confuses React's Fast Refresh.
-                So instead of just updating the part you changed, it gives up and reloads the whole app.
-
-        ✅ Fix it like this:
-                Move the non-React stuff into a separate file.
-
-        For example:
-                ❌ Bad (all in one file):
-
-                        // layout.tsx
-                        export const myConstant = "hello";
-                        export const Layout = () => <div>Layout</div>;
-                        
-                ✅ Good (split into two files):
-
-                        // layout-constants.ts
-                        export const myConstant = "hello";
-
-                        // layout.tsx
-                        import { myConstant } from "./layout-constants";
-                        export const Layout = () => <div>Layout</div>;
-                        Now Fast Refresh will work better — no full page reloads 🎉
-
+If you upload to YouTube/Netflix → use MP4 (universal).
+If you’re editing in Final Cut Pro on Mac → MOV is common.
 ----------
-Why unwrap() is used with dispatch(submitDoctorOnboarding())
-        - When you dispatch a thunk created by createAsyncThunk, it returns a Promise that resolves to a special Action object — not directly to the fulfilled/rejected payload. This object contains metadata like type, payload, error, etc.
-
-📦 Without unwrap()
-        const result = await dispatch(submitDoctorOnboarding());
-        // result is an Action object, not just the returned data
-        console.log(result); // { type: 'submitDoctorOnboarding/fulfilled', payload: ..., meta: ... }
-
-✅ What .unwrap() does
-.unwrap() is a helper method provided by Redux Toolkit that:
-        - Returns the raw payload if the thunk was fulfilled.
-        - Throws an error if the thunk was rejected.
-        - So, this lets you use try/catch naturally, like you would with a normal async function:
-
-✅ With .unwrap()
-        try {
-          const data = await dispatch(submitDoctorOnboarding()).unwrap();
-          console.log('Success payload:', data);
-        } catch (err) {
-          console.error('Thunk failed and threw:', err);
-        }
-This is cleaner and avoids manual checking of action types or status fields.
----------------------
-
-builder
-  .addCase(fetchOtherUsers.pending, (state) => { // fetchOtherUsers is a async thunk function
-    state.loading = true;
-  })
-  .addCase(fetchOtherUsers.fulfilled, (state, action) => {
-    state.otherUsers = action.payload;
-  })
-  .addCase(fetchOtherUsers.rejected, (state, action) => {
-    state.error = action.payload;
-  });
 
 
-✅ What is builder?
-        - In Redux Toolkit, builder is just a helper object that you use inside extraReducers to handle different cases of actions — especially async actions like those from createAsyncThunk.
-        - extraReducers is used in Redux Toolkit to handle actions that are not defined directly in the slice, like those created by createAsyncThunk.
-        - builder helps define how your state should respond to those different states of the async thunk (fetchOtherUsers).
 
-In your case, you're handling three states of the fetchOtherUsers thunk:
-        - pending → request is being made
-        - fulfilled → request succeeded
-        - rejected → request failed
 
-Think of it like this: 🧱 builder helps you "build" the logic for what happens when an action is:
-        - starting (pending)
-        - successful (fulfilled)
-        - failed (rejected)
 
-🔧 What does builder do?
-        It gives you methods like: .addCase(actionName, callback) — This lets you say: “When this action happens, do this to the state.”
 
-💡 Example:
 
-builder
-  .addCase(fetchOtherUsers.pending, (state) => { // fetchOtherUsers is a async thunk function
-    state.loading = true;
-  })
-  .addCase(fetchOtherUsers.fulfilled, (state, action) => {
-    state.otherUsers = action.payload;
-  })
-  .addCase(fetchOtherUsers.rejected, (state, action) => {
-    state.error = action.payload;
-  });
 
-Each .addCase(): Listens to a specific state of the fetchOtherUsers async thunk (pending, fulfilled, rejected) and Updates the state accordingly
 
-🧠 Why it's called builder?
-        Because you use it to build up your list of action handlers. It’s just a pattern that Redux Toolkit uses to keep things clean and organized — especially for async actions.
 
-🧱 What is addCase in Redux Toolkit?
-        In Redux Toolkit, .addCase() is a function used inside extraReducers to handle specific actions — especially useful when working with createAsyncThunk.
+-----------
+🎚 What is Bitrate?
 
-🟢 In Simple Words:
-        addCase lets you tell Redux: “When this action happens, run this code to update the state.”
+        -> Bitrate = the amount of data per second needed to play a video or audio.
+        -> Measured in kbps (kilobits per second) or Mbps (megabits per second).
+
+        👉 Example: A video encoded at 5 Mbps means every second of video requires 5 megabits of data.
+
+Why it matters:
+
+        Higher bitrate → better quality (more detail, less compression).
+        Lower bitrate → smaller size, loads faster, but may look blurry or pixelated.
+
+📡 What is Bandwidth?
+
+        -> Bandwidth = the maximum amount of data your internet connection can transfer per second.
+        -> Also measured in Mbps.
+        -> Think of it like the width of a water pipe:
+                - Bigger pipe (more bandwidth) → more water (data) flows at once.
+                - Smaller pipe → less water flows, might choke if too much is sent.
+
+🔄 How Bitrate Consumes Bandwidth
+
+        To watch a video, your internet must handle at least the bitrate of the stream.
+
+        👉 Example:
+                - If a video is encoded at 5 Mbps and your internet bandwidth is 10 Mbps, playback is smooth.
+                - If your internet bandwidth is only 2 Mbps, you’ll see buffering (can’t keep up).
+
+        So:
+                - Bitrate is demand (how much data the video needs).
+                - Bandwidth is supply (how much your network can deliver).
+
+⚡ Real-world Example (YouTube/Netflix)
+
+        - 1080p HD → ~5 Mbps bitrate
+        - 4K Ultra HD → ~15–25 Mbps bitrate
+        - Audio only → ~128 kbps bitrate
+
+        - If your Wi-Fi bandwidth is 20 Mbps: You can easily watch 4K video.
+        - If your Wi-Fi bandwidth is 3 Mbps: You’ll have to drop to 480p or 360p to avoid buffering.
+
+✅ In short:
+
+Bitrate = video’s hunger for data per second.
+Bandwidth = how much food (data) your internet pipe can deliver per second.
+The video will only play smoothly if bandwidth ≥ bitrate.
+-----------
+
+
+
+
+
+
+
+-----------
+🌐 1. HLS (HTTP Live Streaming)
+
+        - Made by Apple.
+        - Works by cutting video into small chunks (.ts files) and using a playlist (.m3u8) to tell the player what to play.
+        - Delivered over normal HTTP → works with CDNs, browsers, and mobile.
+        - Latency: ~5–10 seconds.
+        - Best for: video-on-demand, scalable live streams (like YouTube, Disney+).
+
+        👉 Example:
+        When you watch a YouTube video or a live stream, chances are it’s running on HLS behind the scenes.
+
+🌐 2. DASH (Dynamic Adaptive Streaming over HTTP)
+
+Similar to HLS, but made by an international standard (MPEG), not just Apple.
+Uses .mpd files (instead of .m3u8) to describe the chunks.
+
+        - Supports adaptive bitrate (like HLS).
+        - More flexible and codec-agnostic (works with H.264, H.265, VP9, AV1).
+        - Latency: usually ~5–10 seconds (same as HLS).
+        - Best for: platforms that want to support many devices, codecs, or DRM (Netflix uses DASH a lot).
+
+📡 3. RTMP (Real-Time Messaging Protocol)
+
+        - An older protocol created by Macromedia (Flash era).
+        - Still used today as the ingest protocol:
+        - OBS (screen recording tool) → RTMP → Server (YouTube, Twitch, Facebook Live).
+        - Not good for playback anymore (since Flash is dead).
+        - But excellent for sending streams from broadcasters to servers because it’s simple and stable.
+        - Latency: very low (<2 seconds when direct), but usually re-transcoded into HLS/DASH for viewers.
+        - Best for: getting a live stream into the system.
+
+        🔹 What is an ingest protocol?
+
+                - Ingest = “how the video first enters the streaming system.”
+                - When you stream live, your computer (with OBS, or browser) captures video and sends it to a server.
+                - The protocol used to send that video is called the ingest protocol.
+
+                👉 Example:
+                You → OBS → send video → YouTube server
+                That “sending step” uses an ingest protocol.
+
+        🔹 Why RTMP is still used for ingest
+
+                - RTMP (Real-Time Messaging Protocol) is very good at sending live video quickly and reliably.
+                - Even though it was made in the Flash era, it’s still the standard way for broadcasters (like OBS, cameras, encoders) to send streams into platforms like YouTube, Twitch, and Facebook.
+
+        👉 Why not use HLS/DASH directly?
+
+                - HLS/DASH are great for playback (viewers) but have 5–10 sec latency (too slow for ingest).
+                - RTMP is low-latency (<2 sec) and stable → perfect for getting video into the system.
+
+        🔹 The Usual Flow
+
+                - Your PC runs OBS (or another encoder).
+                - OBS uses RTMP to send your video to YouTube’s server.
+                - YouTube receives RTMP → converts it into HLS/DASH → sends it to viewers.
+
+                👉 So, RTMP is used on the “input” side, not the “output” side anymore.
+
+
+        RTMP’s Role
+
+                - RTMP is mainly used to send (ingest) the live video from the user (broadcaster) → server (YouTube, Twitch, Facebook, etc.).
+                - After the server receives it, it usually converts (transcodes) the video into formats that viewers’ devices can play (like HLS/DASH/WebRTC).
+
+        🔹 Why Not Use RTMP for Viewers?
+
+                - Back in the Flash Player era, viewers also watched via RTMP.
+                - But Flash is dead (not supported in browsers anymore).
+                - So today:
+                        - RTMP = input only (user → server).
+                        - HLS/DASH/WebRTC = output to viewers.
+
+        🔹 Typical Live Streaming Flow
+
+        Streamer (OBS / Camera / Browser)
+        ↓   (RTMP)
+        Ingest Server (YouTube, Twitch, etc.)
+        ↓   (transcoding to HLS/DASH/WebRTC)
+        Viewers (browser / phone / TV)
+
+
+        ✅ So, in simple words:
+                - RTMP is the delivery truck 🚚 that carries your live video from your PC to YouTube’s warehouse (server).
+                - Then YouTube repackages it into viewer-friendly formats (HLS, DASH) and delivers it to the audience.
+
+✅ Quick Analogy
+
+RTMP → the delivery truck: it carries your live video from your PC to YouTube’s servers.
+HLS/DASH → the supermarket shelves: videos are chopped, packaged, and put out for millions of viewers to pick up chunk by chunk.
+-----------
