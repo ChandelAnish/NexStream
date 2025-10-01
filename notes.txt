@@ -614,6 +614,92 @@ Raw Video and Audio
 
 
 -----------
+what is meant by 720p, 1080p, ...
+
+        When you hear 720p, 1080p, 4K, etc., it’s talking about video resolution — basically how many pixels (tiny dots) make up the picture.
+
+                720p (HD):
+                        - The “720” means 720 pixels tall (height).
+                        - Standard width is 1280 pixels.
+                        - So resolution = 1280 × 720 pixels.
+
+                1080p (Full HD):
+                        - Height = 1080 pixels.
+                        - Width = 1920 pixels.
+                        - So resolution = 1920 × 1080 pixels.
+
+                👉 Bigger numbers = more pixels = sharper video (if your screen and internet can handle it).
+
+
+
+        The “p” in 720p or 1080p stands for progressive scan.
+
+                        - In progressive scan, every frame of the video is drawn line by line from top to bottom in one go.
+                        - This is different from “i” (interlaced scan), like 1080i, where the picture is drawn in two passes: first the odd lines, then the even lines.
+
+                So:
+
+                        - 720p → video has 720 horizontal lines, shown progressively (all at once per frame).
+                        - 1080p → video has 1080 horizontal lines, also shown progressively.
+
+                👉 The “p” basically means the image looks smoother and sharper, especially for fast motion, because the whole frame updates at once.
+
+
+
+        When we say 720 lines or 1080 lines, we are talking about the number of horizontal rows of pixels that make up the picture.
+
+                Think of your screen like graph paper:
+
+                        - Each little square is a pixel.
+                        - The rows across the screen (from left to right) are the lines.
+
+                So:
+
+                        - 720p means the image has 720 rows of pixels stacked from top to bottom.
+                        - 1080p means it has 1080 rows of pixels.
+
+                Example:
+
+                        - 720p usually = 1280 × 720 pixels (1280 columns × 720 rows).
+                        - 1080p = 1920 × 1080 pixels.
+
+                👉 More lines (rows) = more detail, because the screen has more pixels to show the picture.
+-----------
+
+
+
+
+
+-----------
+ffmpeg Processing
+
+        Processing step (happens on raw data, because compressed data is hard to modify directly):
+
+                - Resize video (e.g., 1080p → 720p).
+                - Change frame rate (e.g., 60fps → 30fps).
+                - Apply filters (watermark, brightness, crop, etc.).
+                - Adjust audio (volume, remove noise, sync).
+
+        When we talk about resizing (scaling) a video, you can actually go both ways:
+
+                🔽 Downscaling (common case):
+
+                        - Convert higher resolution → lower resolution.
+                        - Example: 4K (3840×2160) → 1080p (1920×1080).
+                        - This saves bandwidth and storage. Most streaming services do this to provide multiple qualities (adaptive streaming).
+
+                🔼 Upscaling (possible, but limited):
+
+                        - Convert lower resolution → higher resolution.
+                        - Example: 720p (1280×720) → 1080p (1920×1080).
+                        - But here, you don’t magically get extra detail — FFmpeg just stretches and interpolates pixels, so it looks bigger but not sharper. Some advanced AI upscalers (like Topaz Video Enhance AI) try to add detail, but normal FFmpeg upscaling can look blurry.
+-----------
+
+
+
+
+
+-----------
 YUV420p and PCM
 
         🎨 YUV420p (raw video format)
