@@ -47,9 +47,6 @@
 
 
 
-
-
-
 -------------
 🎬 Full Flow of VOD System
 
@@ -140,12 +137,6 @@
 
 
 
-
-
-
-
-
-
 -----------
 Video Formats
         🎬 What is an MP4 file?
@@ -182,10 +173,6 @@ Video Formats
         If you upload to YouTube/Netflix → use MP4 (universal).
         If you’re editing in Final Cut Pro on Mac → MOV is common.
 -----------
-
-
-
-
 
 
 
@@ -294,6 +281,7 @@ Bitrate And Bandwidth
         👉 In one line:
         Object storage = cloud “bucket” where you drop your files (as objects) and fetch them later via URL.
 -----------
+
 
 
 
@@ -421,6 +409,7 @@ Bitrate And Bandwidth
 
 
 
+
 -----------
 Raw Video and Audio
 
@@ -461,6 +450,7 @@ Raw Video and Audio
                         - A compressed video (H.264) is like a zipped file.
                         - To change or repack it, you must unzip (decode) to the original contents → make edits → then zip (encode) again.
 -----------
+
 
 
 
@@ -622,6 +612,7 @@ Raw Video and Audio
 
 
 
+
 -----------
 YUV420p and PCM
 
@@ -645,6 +636,7 @@ YUV420p and PCM
 
                 👉 Think of it as: a raw recording of the sound wave.
 -----------
+
 
 
 
@@ -742,9 +734,6 @@ Video Streaming Protocols
         RTMP → the delivery truck: it carries your live video from your PC to YouTube’s servers.
         HLS/DASH → the supermarket shelves: videos are chopped, packaged, and put out for millions of viewers to pick up chunk by chunk.
 -----------
-
-
-
 
 
 
