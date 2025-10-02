@@ -1,5 +1,5 @@
 --------------
-        🎥 Types of Streaming
+🎥 Types of Streaming
 
                 1️⃣ On-Demand Streaming (VOD – Video on Demand)
 
@@ -524,157 +524,148 @@ Raw Video and Audio
 
 
 -----------
-🎬 Why Do We Need to Decode in FFmpeg?
+🎬 FFmpeg Decoding
 
-        1️⃣ Different Input Formats
+        🎬 Why Do We Need to Decode in FFmpeg?
 
-                - Users upload all kinds of files: MP4, MOV, MKV, AVI…
-                - Inside, these can have different codecs: H.264, VP9, HEVC, ProRes, etc.
-                - To standardize them, FFmpeg must understand (decode) whatever codec is used → into raw frames/audio.
+                1️⃣ Different Input Formats
 
-                👉 Example: Your phone records in HEVC, another camera records in ProRes → FFmpeg can’t mix/convert them unless it first decodes them to raw.
+                        - Users upload all kinds of files: MP4, MOV, MKV, AVI…
+                        - Inside, these can have different codecs: H.264, VP9, HEVC, ProRes, etc.
+                        - To standardize them, FFmpeg must understand (decode) whatever codec is used → into raw frames/audio.
 
-        2️⃣ Apply Processing or Filters
+                        👉 Example: Your phone records in HEVC, another camera records in ProRes → FFmpeg can’t mix/convert them unless it first decodes them to raw.
 
-                - You can’t resize, crop, watermark, or adjust brightness on compressed video directly.
-                - Those operations need raw frames (like editing photos).
-                - So FFmpeg decodes to raw → applies changes → then re-encodes.
+                2️⃣ Apply Processing or Filters
 
-                - 👉 Example: If you want 1080p and 720p versions: Decode original → resize raw frames → re-encode at new resolutions.
+                        - You can’t resize, crop, watermark, or adjust brightness on compressed video directly.
+                        - Those operations need raw frames (like editing photos).
+                        - So FFmpeg decodes to raw → applies changes → then re-encodes.
 
-        3️⃣ Change Codec or Bitrate (Transcoding)
+                        - 👉 Example: If you want 1080p and 720p versions: Decode original → resize raw frames → re-encode at new resolutions.
 
-                - If the input codec ≠ output codec, you must decode first.
-                - Example:
+                3️⃣ Change Codec or Bitrate (Transcoding)
 
-                        - Input: VP9
-                        - Output: H.264 (for better compatibility)
-                        - Step: Decode VP9 → raw → encode H.264
+                        - If the input codec ≠ output codec, you must decode first.
+                        - Example:
 
-                        👉 Same goes for changing bitrate (say 8 Mbps → 2 Mbps).
+                                - Input: VP9
+                                - Output: H.264 (for better compatibility)
+                                - Step: Decode VP9 → raw → encode H.264
 
-        4️⃣ Guarantee Compatibility
+                                👉 Same goes for changing bitrate (say 8 Mbps → 2 Mbps).
 
-                - Even if you upload H.264, it might have weird settings (wrong profile, unusual GOP size, bad keyframes).
-                - Platforms (YouTube, Netflix, etc.) re-decode and re-encode everything to enforce their standard pipeline.
-                - 👉 That’s why YouTube always says “Processing…” after upload.
+                4️⃣ Guarantee Compatibility
 
-        ✅ In Short
+                        - Even if you upload H.264, it might have weird settings (wrong profile, unusual GOP size, bad keyframes).
+                        - Platforms (YouTube, Netflix, etc.) re-decode and re-encode everything to enforce their standard pipeline.
+                        - 👉 That’s why YouTube always says “Processing…” after upload.
 
-                We need to decode because:
+                ✅ In Short
 
-                        - Uploaded videos come in many codecs and formats.
-                        - To edit, filter, or resize, we must work with raw frames.
-                        - To transcode into new codecs/bitrates, we need to uncompress first.
-                        - To ensure consistency and compatibility across all devices.
+                        We need to decode because:
 
-        💡 Analogy:
+                                - Uploaded videos come in many codecs and formats.
+                                - To edit, filter, or resize, we must work with raw frames.
+                                - To transcode into new codecs/bitrates, we need to uncompress first.
+                                - To ensure consistency and compatibility across all devices.
 
-                - A compressed video is like a zipped folder.
-                - If you want to reorganize files inside, you must unzip (decode) → make changes → zip (encode) again
+                💡 Analogy:
 
+                        - A compressed video is like a zipped folder.
+                        - If you want to reorganize files inside, you must unzip (decode) → make changes → zip (encode) again
 
 
 
 
 
 
+                🔹 Uploaded video ≠ raw
 
+                        - When you upload a video (MP4, MOV, MKV, etc.), it is already compressed by some codec (H.264, H.265, VP9, etc.).
+                        - That’s why the file size is manageable (e.g., 500 MB instead of 50 GB).
+                        - Your camera, screen recorder, or editing software already encoded it before saving.
 
+                🔹 What “Decode the input” really means
 
-        🔹 Uploaded video ≠ raw
+                        - The uploaded video is in a compressed format (H.264, AAC, etc.).
+                        - FFmpeg must decode (unpack) those compressed streams into raw frames + raw audio samples inside memory.
+                        - Once raw, FFmpeg can process, filter, resize, or re-encode.
 
-                - When you upload a video (MP4, MOV, MKV, etc.), it is already compressed by some codec (H.264, H.265, VP9, etc.).
-                - That’s why the file size is manageable (e.g., 500 MB instead of 50 GB).
-                - Your camera, screen recorder, or editing software already encoded it before saving.
+                        👉 The uploaded file itself is not uncompressed, but FFmpeg temporarily uncompresses it in memory to work on it.
 
-        🔹 What “Decode the input” really means
+                🔹 Why not just copy without decoding?
 
-                - The uploaded video is in a compressed format (H.264, AAC, etc.).
-                - FFmpeg must decode (unpack) those compressed streams into raw frames + raw audio samples inside memory.
-                - Once raw, FFmpeg can process, filter, resize, or re-encode.
+                        Sometimes we can!
 
-                👉 The uploaded file itself is not uncompressed, but FFmpeg temporarily uncompresses it in memory to work on it.
+                        - If the uploaded video is already in H.264 + AAC (the exact format we want), FFmpeg can skip decoding and just re-package (called remuxing).
+                        - Example: ffmpeg -i input.mp4 -c copy output.mkv
+                                - Here FFmpeg doesn’t decode/encode, it just puts the compressed streams into a new container.
 
-        🔹 Why not just copy without decoding?
+                        - But in most streaming platforms (like YouTube):
 
-                Sometimes we can!
+                                - They re-encode everything to guarantee compatibility, multiple resolutions, and consistent settings.
+                                - So decoding → raw → re-encode is necessary.
 
-                - If the uploaded video is already in H.264 + AAC (the exact format we want), FFmpeg can skip decoding and just re-package (called remuxing).
-                - Example: ffmpeg -i input.mp4 -c copy output.mkv
-                        - Here FFmpeg doesn’t decode/encode, it just puts the compressed streams into a new container.
+                        ✅ In Short:
 
-                - But in most streaming platforms (like YouTube):
+                                - Uploaded video = already compressed (H.264, VP9, etc.).
+                                - FFmpeg decode step = temporarily uncompresses it into raw frames/audio in memory.
+                                - Then re-encodes into the platform’s preferred codec/resolutions.
 
-                        - They re-encode everything to guarantee compatibility, multiple resolutions, and consistent settings.
-                        - So decoding → raw → re-encode is necessary.
 
-                ✅ In Short:
 
-                        - Uploaded video = already compressed (H.264, VP9, etc.).
-                        - FFmpeg decode step = temporarily uncompresses it into raw frames/audio in memory.
-                        - Then re-encodes into the platform’s preferred codec/resolutions.
 
 
+                🎬 Example: User Uploads an MP4 Video
 
+                        📤 Step 1: Upload
 
+                                - User uploads video.mp4 to your server.
+                                - Inside that MP4:
+                                        - Video track → H.264 (compressed frames)
+                                        - Audio track → AAC (compressed audio samples)
 
+                                - The file is already compressed (not raw).
 
+                        ⚙️ Step 2: FFmpeg Reads & Decodes
 
+                                - FFmpeg opens the MP4 file and decodes:
+                                        - H.264 video → expanded into raw video frames (bitmaps of each frame).
+                                        - AAC audio → expanded into raw PCM samples (waveform data).
 
+                                👉 Example command: ffmpeg -i video.mp4 output.raw
+                                        - This would literally dump raw frames/audio (huge files). Normally, you don’t save raw — you just hold it in memory.
+                                        - Raw video format inside FFmpeg → often YUV420p (pixel data).
+                                        - Raw audio format inside FFmpeg → often PCM (Pulse Code Modulation) samples.
 
+                        🔄 Step 3: Processing (Optional)
 
+                                While FFmpeg has the raw frames in memory, it can:
+                                        - Resize (1080p → 720p, 480p).
+                                        - Apply filters (watermark, brightness, crop).
+                                        - Change frame rate (60 fps → 30 fps).
 
+                        👉 Example: ffmpeg -i video.mp4 -vf scale=1280:720 output.mp4
+                                - Decodes → resizes raw frames → re-encodes.
 
-        🎬 Example: User Uploads an MP4 Video
+                        📦 Step 4: Re-Encode
 
-                📤 Step 1: Upload
+                                - After processing, FFmpeg re-encodes the raw frames/audio into your target format.
+                                - For streaming systems:
+                                        - Video → H.264 (universal)
+                                        - Audio → AAC (universal)
 
-                        - User uploads video.mp4 to your server.
-                        - Inside that MP4:
-                                - Video track → H.264 (compressed frames)
-                                - Audio track → AAC (compressed audio samples)
+                        👉 Example:
 
-                        - The file is already compressed (not raw).
+                                ffmpeg -i video.mp4 \
+                                -c:v libx264 -b:v 3000k -c:a aac -b:a 128k output.m3u8
+                                
+                                - This decodes input → re-encodes into H.264/AAC → packages as HLS.
 
-                ⚙️ Step 2: FFmpeg Reads & Decodes
+                        ✅ Final Output
 
-                        - FFmpeg opens the MP4 file and decodes:
-                                - H.264 video → expanded into raw video frames (bitmaps of each frame).
-                                - AAC audio → expanded into raw PCM samples (waveform data).
-
-                        👉 Example command: ffmpeg -i video.mp4 output.raw
-                                - This would literally dump raw frames/audio (huge files). Normally, you don’t save raw — you just hold it in memory.
-                                - Raw video format inside FFmpeg → often YUV420p (pixel data).
-                                - Raw audio format inside FFmpeg → often PCM (Pulse Code Modulation) samples.
-
-                🔄 Step 3: Processing (Optional)
-
-                        While FFmpeg has the raw frames in memory, it can:
-                                - Resize (1080p → 720p, 480p).
-                                - Apply filters (watermark, brightness, crop).
-                                - Change frame rate (60 fps → 30 fps).
-
-                👉 Example: ffmpeg -i video.mp4 -vf scale=1280:720 output.mp4
-                        - Decodes → resizes raw frames → re-encodes.
-
-                📦 Step 4: Re-Encode
-
-                        - After processing, FFmpeg re-encodes the raw frames/audio into your target format.
-                        - For streaming systems:
-                                - Video → H.264 (universal)
-                                - Audio → AAC (universal)
-
-                👉 Example:
-
-                        ffmpeg -i video.mp4 \
-                        -c:v libx264 -b:v 3000k -c:a aac -b:a 128k output.m3u8
-                        
-                        - This decodes input → re-encodes into H.264/AAC → packages as HLS.
-
-                ✅ Final Output
-
-                Now you have streaming-friendly files: Video chunks (segment0.ts, segment1.ts …) and Playlist (.m3u8) All encoded in H.264 (video) + AAC (audio).
+                        Now you have streaming-friendly files: Video chunks (segment0.ts, segment1.ts …) and Playlist (.m3u8) All encoded in H.264 (video) + AAC (audio).
 -----------
 
 
@@ -739,7 +730,7 @@ what is meant by 720p, 1080p, ...
 
 
 -----------
-FFmpeg Processing
+🎬 FFmpeg Processing
 
         Processing step (happens on raw data, because compressed data is hard to modify directly):
 
@@ -761,6 +752,23 @@ FFmpeg Processing
                         - Convert lower resolution → higher resolution.
                         - Example: 720p (1280×720) → 1080p (1920×1080).
                         - But here, you don’t magically get extra detail — FFmpeg just stretches and interpolates pixels, so it looks bigger but not sharper. Some advanced AI upscalers (like Topaz Video Enhance AI) try to add detail, but normal FFmpeg upscaling can look blurry.
+
+
+
+        📌 Where resolution changes
+
+                - Changing resolution (480p → 720p → 1080p) = resizing filter.
+                - This belongs to the processing stage (because it’s a transformation of raw frames).
+                - But it’s always paired with re-encoding, because raw frames are too huge to store/stream.
+
+        So the flow is:
+
+                - Decode → raw frames.
+                - Processing (resize) → raw frames resized to target resolution.
+                - Encoding → compress those resized frames into H.264/VP9/etc.
+
+        ✅ That’s why we usually say “resolution conversion happens during encoding,”
+        because in practice, FFmpeg does resize + encode in one command.
 -----------
 
 
@@ -796,7 +804,7 @@ YUV420p and PCM
 
 
 -----------
-FFmpeg Encoding
+🎬 FFmpeg Encoding
 
         When FFmpeg does the encoding step, it usually converts the raw video/audio into widely supported codecs so that almost any device/browser can play them.
 
@@ -830,6 +838,288 @@ FFmpeg Encoding
 
         ⚡ So to answer you simply:
         The encoding step usually outputs H.264 video + AAC audio, because that pair is universal and safe.
+
+
+
+.
+
+        🎬 Step 1: Upload
+
+                You upload video.mp4 (say, H.264 codec, AAC audio, 1080p resolution).
+                The server receives the file and stores it temporarily.
+
+        🎬 Step 2: FFmpeg starts processing
+
+                FFmpeg pipeline will look like this:
+
+                        (a) Decode
+
+                                - FFmpeg reads video.mp4.
+                                - It decodes the compressed H.264 video into raw frames (YUV420p format usually).
+                                - Audio is decoded into raw PCM samples.
+
+                                👉 Now we have the video as raw images + raw audio samples.
+
+                        (b) Processing (resizing into 4 versions)
+
+                                FFmpeg duplicates the raw video stream into 4 branches:
+
+                                        - 1080p branch → keep same resolution.
+                                        - 720p branch → scale down raw frames from 1920×1080 → 1280×720.
+                                        - 480p branch → scale down to 854×480.
+                                        - 360p branch → scale down to 640×360.
+
+                                ⚡ This happens via FFmpeg’s scale filter (e.g., -vf scale=1280:720).
+
+                        (c) Encoding
+
+                                Each branch is encoded (compressed) again into a codec.
+
+                                        - Video → H.264 (common for playback).
+                                        - Audio → AAC (common for playback).
+
+                                Bitrate is set for each version (e.g., 1080p = 5 Mbps, 720p = 3 Mbps, 480p = 1.5 Mbps, 360p = 800 kbps).
+
+                                So now you have 4 compressed streams:
+
+                                        - 1080p_h264_aac.mp4
+                                        - 720p_h264_aac.mp4
+                                        - 480p_h264_aac.mp4
+                                        - 360p_h264_aac.mp4
+
+                        (d) Packaging
+
+                                Now, depending on what you want:
+
+                                        1) If VOD (progressive download): Just keep the 4 MP4 files.
+
+                                        2) If adaptive streaming (HLS/DASH):
+
+                                                - Split each MP4 into chunks (e.g., .ts files of 6s each).
+                                                - Generate a playlist (.m3u8 for HLS or .mpd for DASH) that tells the player which resolution versions are available.
+                                                - Player can switch between resolutions dynamically.
+
+                                                Example:
+
+                                                        - 1080p_000.ts, 1080p_001.ts, …
+                                                        - 720p_000.ts, 720p_001.ts, …
+                                                        - master.m3u8 (index file that lists all 4 versions).
+
+                                                📌 Final Flow (stepwise)
+
+                                                        - Upload: video.mp4 (1080p).
+                                                        - Decode: compressed H.264 → raw frames (YUV) + raw PCM audio.
+                                                        - Process: apply filters → resize into 1080p, 720p, 480p, 360p.
+                                                        - Encode: compress each with H.264 + AAC, assign different bitrates.
+                                                        - Package: save as MP4 (for direct VOD) OR chunk + playlist (for HLS/DASH).
+
+
+
+        1) FFmpeg decodes your uploaded MP4 into raw frames (images in YUV420p) and raw audio (PCM).
+
+                - These raw frames are not written to disk (too huge!).
+                - They stay in RAM (memory).
+
+        2) Filters (processing stage) run in memory.
+
+                - FFmpeg takes each decoded frame in RAM.
+                - Then it applies the scale filter multiple times:
+
+                        - One copy stays 1080p.
+                        - Another copy gets resized to 720p.
+                        - Another to 480p.
+                        - Another to 360p.
+
+                        So at this moment, 4 different versions of the same raw frame exist in memory.
+
+        3) Encoders then compress each branch (H.264 + AAC) immediately while still in RAM.
+                - Encoded chunks or MP4 files are written out to disk/network.
+
+        🔄 How it actually works:
+
+                1) FFmpeg reads a small chunk of the video file.
+                2) It decodes that part → raw video frame + raw audio samples.
+                3) That raw frame goes through the filters (resizing → 1080p, 720p, 480p, 360p).
+                4) Each resized copy exists only briefly in memory.
+                5) Each copy is immediately sent to the encoder, compressed, and written to output (disk or network).
+                6) Once a frame is finished, FFmpeg discards it from RAM and moves to the next frame.
+-----------
+
+
+
+
+
+-----------
+🎥 What is Progressive Download and how it works?
+
+                - Imagine you upload one MP4 file (say a 720p video).
+                - When a user clicks play, the video starts downloading from the server just like any other file (like downloading a PDF).
+                - BUT — modern video players (like HTML5 <video> tag) don’t wait for the whole file to finish downloading.
+                - Instead:
+
+                        - As soon as the first part of the file arrives, playback begins.
+                        - While the user watches, the rest of the file keeps downloading in the background.
+
+                - This is why it’s called progressive → because playback progresses as download progresses.
+
+        ⚡ Key Characteristics:
+
+                ✅ Simple: Only one MP4 per resolution.
+                ✅ Works on most browsers without special setup.
+                ❌ Not adaptive: If a user’s internet slows down, the video may buffer (pause).
+                ❌ Higher bandwidth waste: If a user only watches the first 2 minutes, the player might still download the whole file.
+
+        🔄 Comparison with Adaptive Streaming (HLS/DASH):
+
+                - In adaptive streaming, the video is cut into small chunks (e.g., 6s .ts files).
+                - The player chooses which resolution chunk to download based on your internet speed (720p if fast, 360p if slow).
+                - If network conditions change mid-playback, the player can switch resolution seamlessly.
+
+                Example:
+
+                        - Progressive: One full MP4 file → plays start to finish.
+                        - Adaptive: Many small chunks → player selects best chunk quality dynamically.
+
+        🧩 How Video is Divided into Chunks (for adaptive streaming)
+
+                Let’s say you have a 1-minute video:
+
+                        - If chunk size = 10 seconds → the encoder splits it into 6 chunks.
+                        - Each chunk is a self-contained mini video segment (with its own audio+video+metadata).
+                        - Plus, a playlist file (.m3u8 for HLS) is created which lists the order of chunks.
+                        - The player just reads this playlist and fetches chunks one by one.
+
+        👉 So, in short:
+
+                - Progressive download = one big MP4, downloaded + played progressively.
+                - Adaptive streaming = many small chunks, playlist tells which chunk to play, and resolution can change mid-stream.
+
+
+
+        🔹 How Progressive Download Works
+
+                One big MP4 file exists on the server.
+                        Example: movie.mp4.
+
+                When you press play in the browser/video player:
+                        - The player sends a HTTP request to the server for the file.
+                        - The server starts sending the MP4 in small pieces (packets) over the internet.
+
+                The MP4 file is designed with something called an index (moov atom).
+
+                        - This index tells the player where the video and audio data are inside the file.
+                        - If the index is at the beginning of the file, the player can start playback immediately as data comes in.
+
+                Streaming while downloading:
+
+                        - The player doesn’t need the whole file to start.
+                        - It only needs enough data to decode the first few seconds.
+                        - While you’re watching second 1–10, the player is downloading second 11–20 in the background.
+                        - This is why playback feels like “streaming,” even though technically it’s just a download.
+
+                🔹 Example
+
+                        - Suppose the video is 100 MB.
+                        - You press play → the first 5 MB (say 10 seconds of video) downloads.
+                        - The player starts showing that part immediately.
+                        - Meanwhile, the rest of the video keeps downloading.
+                        - If your internet is fast → the download stays ahead of playback.
+                        - If your internet is slow → playback may catch up to the download → buffering happens.
+
+                🔹 Key Idea
+
+                        - You can watch while it’s still downloading because:
+                        - The MP4 is structured so that the metadata (index) is available early.
+                        - The player only needs a small portion of the file at a time to keep going.
+                        - Download + playback happen in parallel.
+
+                💡 Think of it like eating pizza:
+
+                        - The whole pizza (video file) is being baked (downloaded).
+                        - As soon as the first slice is ready, you start eating it.
+                        - Meanwhile, the rest of the pizza keeps coming out of the oven.
+                        - If the oven is too slow, you’ll have to wait before your next slice → that’s buffering.
+
+
+
+        🔹 1. What is the moov atom?
+
+                In an MP4 file, data is stored in “atoms” (or boxes).
+
+                        - mdat atom = contains the actual media data (video + audio bytes).
+                        - moov atom = contains the movie info (index/table of contents).
+
+                Think of the moov atom like the table of contents of a book:
+
+                It tells you:
+
+                        - where each video frame is inside the file,
+                        - the duration,
+                        - timing information (timestamps),
+                        - codec details (e.g., H.264 video, AAC audio),
+                        - how audio and video are synchronized.
+
+                Without the moov atom, the player wouldn’t know where to look in the raw media data.
+
+        🔹 2. How it works when you play a video:
+
+                - The video player first downloads the moov atom (tiny file info, maybe a few KB).
+                - From moov, it learns:
+
+                        - “Okay, the video is H.264, the audio is AAC.”
+                        - “The first frame starts here, the second frame is here…”
+                        - “If the user seeks to 2:30, I can jump directly to this byte in the file.”
+
+                - After that, it starts downloading the mdat (the real video/audio data) little by little.
+                - Since moov told the player where frames are, it can start showing frames as soon as enough data comes in — without waiting for the whole file.
+
+        🔹 3. Why must moov be first?
+
+                - If the moov atom is at the start → player gets the instructions immediately, so playback starts quickly.
+                - If the moov atom is at the end → the player must download the whole video file before it even knows how to play it. (That’s bad for streaming.)
+
+        🔹 4. How can video play before the full file is downloaded?
+
+                Because the player doesn’t need the entire file at once. It just needs:
+
+                        - The index (moov atom).
+                        - The first few frames + audio samples i.e mdat.
+
+                Once it has those, it can start showing the video. Meanwhile, the rest is still downloading.
+
+        🔹 5. But we didn’t divide the video into chunks… so how is it downloaded?
+
+                Here’s the trick:
+
+                        - The server doesn’t send the file as one big piece.
+                        - When you download anything over HTTP/TCP, the file is automatically broken down into packets (small pieces of data).
+                        - These packets flow from server → internet → player.
+                        - The player’s job is to buffer those packets until it has enough to decode a few seconds of video.
+                        - So even though you didn’t create .ts chunks (like HLS does), the network itself delivers the file in little packets.
+                        - 👉 That’s why playback feels like “chunks,” even though it’s just one file being streamed sequentially.
+
+
+
+        In progressive download, you can’t just jump to the last 2 minutes without downloading everything before it (unless the player has already buffered that part).
+
+                Here’s why:
+
+                        - Remember the mdat (the actual video/audio data)?
+                        - In progressive download, the server just sends the file sequentially from start to end.
+                        - Even if the moov atom tells you “the last 2 minutes start at byte X,” the server isn’t cutting the file for you — it’s still sending everything in order.
+
+                So:
+
+                        - If you skip ahead, the player will either keep downloading all data until that part is reached (wasting bandwidth)…
+                        - Or it must request a new file starting from that byte offset, but most simple HTTP servers don’t support that unless byte-range requests are enabled.
+
+                🔑 Main difference with streaming (HLS/DASH):
+
+                        - In adaptive streaming, the video is already split into chunks (like 6-second .ts files).
+                        - If you want the last 2 minutes, the player just requests the final 20 chunks directly — no need to download the earlier part.
+
+                👉 So in progressive download, practically you have to download the whole file sequentially.
+                👉 In true streaming, you only fetch the parts you need.
 -----------
 
 
