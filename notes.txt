@@ -172,6 +172,74 @@ Video Formats
 
         If you upload to YouTube/Netflix → use MP4 (universal).
         If you’re editing in Final Cut Pro on Mac → MOV is common.
+
+
+
+
+
+        When FFmpeg finishes encoding the raw video + audio into compressed streams (like H.264 video + AAC audio), those streams still need a “box” to live in. That box is called a container format.
+
+        A container is like a folder/box that holds:
+
+                - the video stream,
+                - the audio stream,
+                - subtitles (optional),
+                - metadata (title, duration, codec info, etc.).
+
+        Common Containers:
+
+                - .mp4 → Most popular, widely supported (H.264/H.265 + AAC audio).
+                - .mkv → More flexible, can hold almost any codec (used for movies, supports multiple audio/subtitle tracks).
+                - .ts (MPEG Transport Stream) → Often used in broadcasting, streaming (e.g., live TV, HLS).
+
+        👉 Example:
+                If you have H.264 video + AAC audio, you could wrap them into:
+
+                        - movie.mp4 (standard for web/mobile)
+                        - movie.mkv (for flexibility, e.g., multiple subtitles/audio)
+                        - movie.ts (for live streaming chunks).
+
+        So the line you asked about means: ➡️ After FFmpeg encodes, it wraps the streams inside one of these containers to produce the final playable file.
+
+
+
+
+
+        1. MP4 & MOV
+
+                - These are file-based containers.
+                - They hold the entire compressed video + audio from start to end in one file.
+                - Example: movie.mp4 → contains the full 2-hour movie.
+
+        2. .TS (MPEG Transport Stream)
+
+                - Designed for broadcasting and streaming.
+                - Instead of one big file, it can be broken into small chunks (e.g., 2–10 seconds each).
+                - That’s why .ts is often used in HLS (HTTP Live Streaming) → video is split into many .ts parts, and a playlist file (.m3u8) tells the player which chunk to play next.
+
+                👉 But .ts can also store a whole video in one file (like .mp4), it’s just more common to see it split into chunks for streaming.
+
+        each .ts (Transport Stream) file can contain:
+
+                - 🎥 Video (usually H.264, H.265, etc.)
+                - 🔊 Audio (AAC, MP3, etc.)
+                - 📝 Subtitles/Closed Captions (if included)
+                - ℹ️ Metadata (timestamps, program info, error correction, etc.)
+
+        But here’s the key point: 👉 Each .ts chunk is self-contained. That means even if you take one .ts file (say, a 5-second chunk), it has everything needed (video + audio + metadata) to play that 5 seconds properly.
+
+        That’s why streaming works:
+
+                - Your video player downloads .ts chunks one by one.
+                - Each chunk has its own mini package of audio + video + metadata.
+                - The player stitches them together smoothly using the playlist (.m3u8).
+
+                So, every .ts chunk is like a little standalone media container for a short duration.
+
+        So:
+
+                - MP4 / MOV = whole video in one piece (good for download/playback).
+                - TS = usually smaller pieces (good for live/streaming), but can also be one big file.
 -----------
 
 
@@ -671,7 +739,7 @@ what is meant by 720p, 1080p, ...
 
 
 -----------
-ffmpeg Processing
+FFmpeg Processing
 
         Processing step (happens on raw data, because compressed data is hard to modify directly):
 
@@ -721,6 +789,47 @@ YUV420p and PCM
                 - It’s uncompressed → very big, but simple and accurate.
 
                 👉 Think of it as: a raw recording of the sound wave.
+-----------
+
+
+
+
+
+-----------
+FFmpeg Encoding
+
+        When FFmpeg does the encoding step, it usually converts the raw video/audio into widely supported codecs so that almost any device/browser can play them.
+
+        Common Codecs After Encoding:
+
+        🎥 Video:
+
+                - H.264 (AVC) → most common, supported everywhere (phones, browsers, TVs).
+                - H.265 (HEVC) → newer, smaller file size, but licensing + less browser support.
+                - VP9 / AV1 → open-source alternatives (Google’s VP9, newer AV1).
+
+        🔊 Audio:
+
+                - AAC → most common audio codec for MP4/HLS/DASH.
+                - MP3 (older, less efficient).
+                - Opus (great quality, used in WebRTC, some streaming).
+
+        👉 So, if you upload an .mp4 file to YouTube:
+
+                1) YouTube decodes it to raw frames & samples.
+                2) Then re-encodes it into multiple versions like:
+
+                        - 1080p H.264 + AAC
+                        - 720p H.264 + AAC
+                        - 480p H.264 + AAC
+                        - … maybe also VP9/AV1 for better compression.
+
+                3) Packs them into containers (.mp4 for VOD, .ts for HLS chunks).
+
+                That way, your video is playable across all browsers, TVs, and phones.
+
+        ⚡ So to answer you simply:
+        The encoding step usually outputs H.264 video + AAC audio, because that pair is universal and safe.
 -----------
 
 
