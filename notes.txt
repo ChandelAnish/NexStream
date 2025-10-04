@@ -1129,6 +1129,18 @@ YUV420p and PCM
 -----------
 🎬 FFmpeg Packaging
 
+        Now comes HLS’s role:
+                Packaging: 
+                        - Takes the encoded video (e.g., H.264 + AAC inside MP4)
+                        - Splits it into segments (e.g., .ts or .m4s)
+                        - Creates .m3u8 playlists describing how to play those segments
+                        
+                Delivery: 
+                        - Client requests the master playlist therefore the player (e.g., Safari or VLC) first downloads master.m3u8. → It lists available qualities (1080p, 720p, etc.).
+                        - Player picks a quality based on the user’s internet speed, it chooses (say) 720p.m3u8.
+                        - Player requests chunks → It downloads them one by one over HTTP (just normal web requests).
+                        - Adaptive switching → If the internet slows down, the player switches to a lower-quality .m3u8 (e.g., 480p) and continues downloading those chunks seamlessly.
+
         1. Starting Point: Encoded MP4s
 
                 After encoding, you have multiple full-length MP4 files for each resolution:
