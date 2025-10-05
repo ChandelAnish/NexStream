@@ -1667,3 +1667,11 @@ Video Streaming Protocols
                 → Server triggers FFmpeg → HLS/DASH files created
                 → Stored on CDN/Storage → Viewer plays via .m3u8
 ------------
+
+
+
+
+
+------------
+
+------------
