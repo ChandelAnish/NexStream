@@ -1806,3 +1806,40 @@ What is serverless and why it is unfit for streaming and web socket integration.
                         - Every time a new request comes, serverless may start a new instance (cold start).
                         - Streaming and WebSockets require low latency; cold starts introduce delays.
 ------------
+
+
+
+
+
+------------
+Node Media Server
+
+        🎬 What Node Media Server (NMS) does
+
+                - Node Media Server is a Node.js package that acts as your streaming engine — it receives, processes, and delivers live video streams.
+                - Think of it like your mini YouTube backend.
+
+        ⚙️ It mainly does 3 big jobs:
+                1. Ingest (Receive Stream)
+
+                        - It listens for incoming live streams from your streaming software (like OBS or your game client).
+                        - The stream usually comes via RTMP (Real-Time Messaging Protocol).
+                        - Example: rtmp://yourserver/live/streamkey
+
+                        You send your gameplay here → NMS receives it.
+
+                2. Transcode / Package (Process Stream)
+
+                        - It can convert that RTMP stream into HLS (.m3u8 + .ts) or DASH format.
+                        - These formats are what browsers and phones can actually play.
+                        - You can configure:
+
+                                - Resolution (1080p, 720p, etc.)
+                                - Bitrate
+                                - Codec (H.264/AAC)
+
+                3. Deliver (Serve to Viewers)
+
+                        - Once it generates .m3u8 playlists and .ts chunks, viewers can watch the stream by loading the HLS link: https://yourserver/live/streamkey/index.m3u8
+                        - The player (like a video.js or hls.js player) fetches these chunks and plays them live.
+------------
