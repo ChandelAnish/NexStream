@@ -69,7 +69,7 @@ export default function HomePage() {
   const downloadStreamingScript = () => {
     const key = streamKey || generateStreamKey();
     setStreamKey(key);
-
+    
     const scriptContent = `@echo off
 echo ========================================
 echo   Live Streaming Script
@@ -80,13 +80,13 @@ echo.
 REM Check if FFmpeg is available
 where ffmpeg >nul 2>&1
 if %errorlevel% neq 0 (
-  echo ERROR: FFmpeg is not installed or not in PATH
-  echo.
-  echo Please install FFmpeg from: https://ffmpeg.org/download.html
-  echo After installation, add FFmpeg to your system PATH
-  echo.
-  pause
-  exit /b 1
+    echo ERROR: FFmpeg is not installed or not in PATH
+    echo.
+    echo Please install FFmpeg from: https://ffmpeg.org/download.html
+    echo After installation, add FFmpeg to your system PATH
+    echo.
+    pause
+    exit /b 1
 )
 
 echo FFmpeg found successfully!
@@ -97,11 +97,8 @@ echo ========================================
 echo.
 echo 1. Stream a Monitor (Video Only)
 echo 2. Stream a Monitor (With Audio)
-echo 3. Stream Specific Window
-echo 4. Stream with Webcam Overlay
-echo 5. Custom Settings
 echo.
-set /p choice="Select option (1-5): "
+set /p choice="Select option (1-2): "
 
 REM Set common parameters
 set STREAM_KEY=${key}
@@ -111,9 +108,6 @@ set QUALITY=medium
 
 if "%choice%"=="1" goto STREAM_MONITOR_NO_AUDIO
 if "%choice%"=="2" goto STREAM_MONITOR_WITH_AUDIO
-if "%choice%"=="3" goto WINDOW
-if "%choice%"=="4" goto WEBCAM
-if "%choice%"=="5" goto CUSTOM
 goto STREAM_MONITOR_NO_AUDIO
 
 :STREAM_MONITOR_NO_AUDIO
@@ -127,11 +121,12 @@ echo Press Ctrl+C to stop streaming
 echo.
 
 ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-  -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-  -pix_fmt yuv420p -r %FPS% ^
-  -g 60 -keyint_min 60 -sc_threshold 0 ^
-  -b:v 4000k -maxrate 4500k -bufsize 9000k ^
-  -f flv "%RTMP_URL%"
+    -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ^
+    -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+    -pix_fmt yuv420p -r %FPS% ^
+    -g 60 -keyint_min 60 -sc_threshold 0 ^
+    -b:v 4000k -maxrate 4500k -bufsize 9000k ^
+    -f flv "%RTMP_URL%"
 
 goto END
 
@@ -151,188 +146,14 @@ echo Press Ctrl+C to stop streaming
 echo.
 
 ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-  -f dshow -i audio="%audio_device%" ^
-  -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-  -pix_fmt yuv420p -r %FPS% ^
-  -g 60 -keyint_min 60 -sc_threshold 0 ^
-  -b:v 4000k -maxrate 4500k -bufsize 9000k ^
-  -c:a aac -ar 44100 -b:a 128k ^
-  -f flv "%RTMP_URL%"
-
-goto END
-
-:WINDOW
-echo.
-echo Position your mouse over the window you want to stream
-echo and note the window title from the taskbar
-echo.
-set /p window_title="Enter window title: "
-echo.
-echo Do you want to include audio? (y/n)
-set /p with_audio="Choice: "
-
-if /i "%with_audio%"=="y" (
-  echo.
-  echo Available audio devices:
-  ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"  \\""
-  echo.
-  set /p audio_device="Enter audio device name: "
-  echo.
-  echo Starting window capture with audio...
-  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-  echo.
-  echo Press Ctrl+C to stop streaming
-  echo.
-  
-  ffmpeg -f gdigrab -framerate %FPS% -i title="%window_title%" ^
-      -f dshow -i audio="%audio_device%" ^
-      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-      -pix_fmt yuv420p -r %FPS% ^
-      -g 60 -keyint_min 60 -sc_threshold 0 ^
-      -b:v 3000k -maxrate 3500k -bufsize 7000k ^
-      -c:a aac -ar 44100 -b:a 128k ^
-      -f flv "%RTMP_URL%"
-) else (
-  echo.
-  echo Starting window capture (VIDEO ONLY)...
-  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-  echo.
-  echo Press Ctrl+C to stop streaming
-  echo.
-  
-  ffmpeg -f gdigrab -framerate %FPS% -i title="%window_title%" ^
-      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-      -pix_fmt yuv420p -r %FPS% ^
-      -g 60 -keyint_min 60 -sc_threshold 0 ^
-      -b:v 3000k -maxrate 3500k -bufsize 7000k ^
-      -f flv "%RTMP_URL%"
-)
-
-goto END
-
-:WEBCAM
-call :SELECT_MONITOR
-if not defined OFFSET_X goto END
-echo.
-echo Detecting webcam devices...
-ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"DirectShow video devices" /C:"DirectShow audio devices" /C:"  \\""
-echo.
-set /p webcam="Enter webcam device name (or press Enter for default): "
-if "%webcam%"=="" set webcam="Integrated Camera"
-
-echo.
-echo Do you want to include audio? (y/n)
-set /p with_audio="Choice: "
-
-if /i "%with_audio%"=="y" (
-  echo.
-  set /p audio_device="Enter audio device name: "
-  echo.
-  echo Starting screen + webcam capture with audio...
-  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-  echo.
-  echo Press Ctrl+C to stop streaming
-  echo.
-  
-  ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-      -f dshow -i video="%webcam%" ^
-      -f dshow -i audio="%audio_device%" ^
-      -filter_complex "[1:v]scale=320:240[webcam];[0:v][webcam]overlay=W-w-10:H-h-10[output]" ^
-      -map "[output]" -map 2:a ^
-      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-      -pix_fmt yuv420p -r %FPS% ^
-      -g 60 -keyint_min 60 -sc_threshold 0 ^
-      -b:v 4500k -maxrate 5000k -bufsize 10000k ^
-      -c:a aac -ar 44100 -b:a 128k ^
-      -f flv "%RTMP_URL%"
-) else (
-  echo.
-  echo Starting screen + webcam capture (VIDEO ONLY)...
-  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-  echo.
-  echo Press Ctrl+C to stop streaming
-  echo.
-  
-  ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-      -f dshow -i video="%webcam%" ^
-      -filter_complex "[1:v]scale=320:240[webcam];[0:v][webcam]overlay=W-w-10:H-h-10[output]" ^
-      -map "[output]" ^
-      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-      -pix_fmt yuv420p -r %FPS% ^
-      -g 60 -keyint_min 60 -sc_threshold 0 ^
-      -b:v 4500k -maxrate 5000k -bufsize 10000k ^
-      -f flv "%RTMP_URL%"
-)
-
-goto END
-
-:CUSTOM
-call :SELECT_MONITOR
-if not defined OFFSET_X goto END
-echo.
-echo ========================================
-echo   CUSTOM STREAMING SETTINGS
-echo ========================================
-echo.
-echo Selected Monitor Resolution: %VIDEO_SIZE%
-set /p resolution="Enter resolution (or press Enter for %VIDEO_SIZE%): "
-if not defined resolution set "resolution=%VIDEO_SIZE%"
-set /p bitrate="Enter video bitrate in kbps (e.g., 3000): "
-set /p fps_custom="Enter FPS (e.g., 30, 60): "
-set /p preset="Enter encoding preset (ultrafast/superfast/veryfast/faster/fast/medium): "
-
-echo.
-echo Do you want to include audio? (y/n)
-set /p with_audio="Choice: "
-
-if /i "%with_audio%"=="y" (
-  echo.
-  echo Available audio devices:
-  ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"  \\""
-  echo.
-  set /p audio_device="Enter audio device name: "
-  echo.
-  echo Starting custom stream with audio...
-  echo Resolution: %resolution%
-  echo Bitrate: %bitrate%kbps
-  echo FPS: %fps_custom%
-  echo Preset: %preset%
-  echo.
-  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-  echo.
-  echo Press Ctrl+C to stop streaming
-  echo.
-  
-  ffmpeg -f gdigrab -framerate %fps_custom% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-      -f dshow -i audio="%audio_device%" ^
-      -c:v libx264 -preset %preset% -tune zerolatency ^
-      -pix_fmt yuv420p -r %fps_custom% ^
-      -s %resolution% ^
-      -g 60 -keyint_min 60 -sc_threshold 0 ^
-      -b:v %bitrate%k -maxrate %bitrate%k -bufsize %bitrate%k ^
-      -c:a aac -ar 44100 -b:a 128k ^
-      -f flv "%RTMP_URL%"
-) else (
-  echo.
-  echo Starting custom stream (VIDEO ONLY)...
-  echo Resolution: %resolution%
-  echo Bitrate: %bitrate%kbps
-  echo FPS: %fps_custom%
-  echo Preset: %preset%
-  echo.
-  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-  echo.
-  echo Press Ctrl+C to stop streaming
-  echo.
-  
-  ffmpeg -f gdigrab -framerate %fps_custom% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-      -c:v libx264 -preset %preset% -tune zerolatency ^
-      -pix_fmt yuv420p -r %fps_custom% ^
-      -s %resolution% ^
-      -g 60 -keyint_min 60 -sc_threshold 0 ^
-      -b:v %bitrate%k -maxrate %bitrate%k -bufsize %bitrate%k ^
-      -f flv "%RTMP_URL%"
-)
+    -f dshow -i audio="%audio_device%" ^
+    -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ^
+    -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+    -pix_fmt yuv420p -r %FPS% ^
+    -g 60 -keyint_min 60 -sc_threshold 0 ^
+    -b:v 4000k -maxrate 4500k -bufsize 9000k ^
+    -c:a aac -ar 44100 -b:a 128k ^
+    -f flv "%RTMP_URL%"
 
 goto END
 
@@ -344,49 +165,45 @@ REM ======================================================================
 @echo off
 echo.
 echo Detecting monitors...
-REM Use PowerShell to get monitor details and save to a temp file
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-Type -AssemblyName System.Windows.Forms; $i=0; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { $i++; Write-Output ('{0},{1},{2},{3},{4}' -f $i, $_.Bounds.X, $_.Bounds.Y, $_.Bounds.Width, $_.Bounds.Height) }" > "%TEMP%\\monitors.tmp" 2>nul
 
 set /a count=0
 for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
-  set /a count+=1
-  echo %%a. Monitor %%a (%%dx%%e at %%b,%%c)
+    set /a count+=1
+    echo %%a. Monitor %%a (%%dx%%e at %%b,%%c)
 )
 
 if %count% LSS 1 (
-  echo ERROR: No monitors were detected, or PowerShell failed.
-  if exist "%TEMP%\\monitors.tmp" del "%TEMP%\\monitors.tmp"
-  pause
-  goto :EOF
+    echo ERROR: No monitors were detected, or PowerShell failed.
+    if exist "%TEMP%\\monitors.tmp" del "%TEMP%\\monitors.tmp"
+    pause
+    goto :EOF
 )
 
 if %count% EQU 1 (
-  echo Only one monitor found, selecting automatically.
-  set "monitor_choice=1"
+    echo Only one monitor found, selecting automatically.
+    set "monitor_choice=1"
 ) else (
-  echo.
-  set /p monitor_choice="Select a monitor to stream (1-%count%): "
+    echo.
+    set /p monitor_choice="Select a monitor to stream (1-%count%): "
 )
 
-REM Basic input validation
-if not defined monitor_choice set "monitor_choice=1"
+set "is_valid="
 for /l %%N in (1,1,%count%) do (
-  if "%monitor_choice%"=="%%N" set "is_valid=1"
+    if "%monitor_choice%"=="%%N" set "is_valid=1"
 )
 if not defined is_valid set "monitor_choice=1"
 
-REM Find the chosen monitor's data
 for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
-  if "%%a"=="%monitor_choice%" (
-      set "OFFSET_X=%%b"
-      set "OFFSET_Y=%%c"
-      set "VIDEO_SIZE=%%dx%%e"
-  )
+    if "%%a"=="%monitor_choice%" (
+        set "OFFSET_X=%%b"
+        set "OFFSET_Y=%%c"
+        set "VIDEO_SIZE=%%dx%%e"
+    )
 )
 
 del "%TEMP%\\monitors.tmp"
 goto :EOF
-
 
 :END
 echo.
@@ -395,9 +212,9 @@ echo Stream ended
 echo ========================================
 pause`;
 
-    const blob = new Blob([scriptContent], { type: "application/x-bat" });
+    const blob = new Blob([scriptContent], { type: 'application/x-bat' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
     a.download = `stream_${key}.bat`;
     document.body.appendChild(a);
