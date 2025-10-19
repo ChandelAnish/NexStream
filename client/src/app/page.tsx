@@ -69,7 +69,7 @@ export default function HomePage() {
   const downloadStreamingScript = () => {
     const key = streamKey || generateStreamKey();
     setStreamKey(key);
-    
+
     const scriptContent = `@echo off
 echo ========================================
 echo   Live Streaming Script
@@ -111,19 +111,20 @@ if "%choice%"=="2" goto STREAM_MONITOR_WITH_AUDIO
 goto STREAM_MONITOR_NO_AUDIO
 
 :STREAM_MONITOR_NO_AUDIO
+setlocal enabledelayedexpansion
 call :SELECT_MONITOR
 if not defined OFFSET_X goto END
 echo.
-echo Starting screen capture (VIDEO ONLY) for Monitor @ %OFFSET_X%,%OFFSET_Y% [%VIDEO_SIZE%]...
+echo Starting screen capture (VIDEO ONLY) for Monitor @ !OFFSET_X!,!OFFSET_Y! [!VIDEO_SIZE!]...
 echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
 echo.
 echo Press Ctrl+C to stop streaming
 echo.
 
-ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-    -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ^
+ffmpeg -f gdigrab -framerate %FPS% -offset_x !OFFSET_X! -offset_y !OFFSET_Y! -video_size !VIDEO_SIZE! -i desktop ^
+    -vf "format=pix_fmts=yuv420p" ^
     -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-    -pix_fmt yuv420p -r %FPS% ^
+    -r %FPS% ^
     -g 60 -keyint_min 60 -sc_threshold 0 ^
     -b:v 4000k -maxrate 4500k -bufsize 9000k ^
     -f flv "%RTMP_URL%"
@@ -147,9 +148,9 @@ echo.
 
 ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
     -f dshow -i audio="%audio_device%" ^
-    -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" ^
+    -vf "format=pix_fmts=yuv420p" ^
     -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-    -pix_fmt yuv420p -r %FPS% ^
+    -r %FPS% ^
     -g 60 -keyint_min 60 -sc_threshold 0 ^
     -b:v 4000k -maxrate 4500k -bufsize 9000k ^
     -c:a aac -ar 44100 -b:a 128k ^
@@ -198,9 +199,19 @@ for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
     if "%%a"=="%monitor_choice%" (
         set "OFFSET_X=%%b"
         set "OFFSET_Y=%%c"
-        set "VIDEO_SIZE=%%dx%%e"
+        set "VIDEO_WIDTH=%%d"
+        set "VIDEO_HEIGHT=%%e"
     )
 )
+
+echo.
+set /p SCALE_PERCENT="Enter display scaling percentage (e.g., 100, 125) [default: 100]: "
+if "%SCALE_PERCENT%"=="" set "SCALE_PERCENT=100"
+
+REM Calculate the final resolution based on scaling
+set /a "VIDEO_WIDTH=!VIDEO_WIDTH! * %SCALE_PERCENT% / 100"
+set /a "VIDEO_HEIGHT=!VIDEO_HEIGHT! * %SCALE_PERCENT% / 100"
+set "VIDEO_SIZE=!VIDEO_WIDTH!x!VIDEO_HEIGHT!"
 
 del "%TEMP%\\monitors.tmp"
 goto :EOF
@@ -212,9 +223,9 @@ echo Stream ended
 echo ========================================
 pause`;
 
-    const blob = new Blob([scriptContent], { type: 'application/x-bat' });
+    const blob = new Blob([scriptContent], { type: "application/x-bat" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = `stream_${key}.bat`;
     document.body.appendChild(a);
