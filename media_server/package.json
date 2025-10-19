@@ -1,15 +1,19 @@
 {
-  "name": "media_server",
+  "name": "nms-server",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Node Media Server with multi-resolution transcoding and HLS support",
+  "main": "nms-server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node nms-server.js",
+    "dev": "nodemon nms-server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "node-media-server": "^4.0.21"
+    "node-media-server": "^2.6.4",
+    "fluent-ffmpeg": "^2.1.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   }
 }

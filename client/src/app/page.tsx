@@ -1,328 +1,684 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  Play, 
-  Video, 
-  Users, 
-  Gamepad2, 
-  Briefcase, 
-  ArrowRight, 
-  CheckCircle,
-  Zap,
-  Shield,
-  Globe
-} from 'lucide-react';
+import { useEffect, useState } from "react";
+import Link from "next/link";
 
-const LandingPage = () => {
-  const [mounted, setMounted] = useState(false);
-  const router = useRouter();
+interface Stream {
+  id: string;
+  streamKey: string;
+  viewers: number;
+  duration: number;
+  bitrate: number;
+  fps: number;
+  thumbnail: string;
+  hlsUrl: string;
+}
+
+export default function HomePage() {
+  const [streams, setStreams] = useState<Stream[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [streamKey, setStreamKey] = useState("");
+  const [showKeyModal, setShowKeyModal] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const fetchStreams = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/api/streams");
+        if (!response.ok) {
+          throw new Error("Failed to fetch streams");
+        }
+        const data = await response.json();
+        setStreams(data.streams);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load streams");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStreams();
+    const interval = setInterval(fetchStreams, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  if (!mounted) return null;
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
 
-  const handleGetStarted = (): void => {
-    router.push('/sign-up');
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs
+        .toString()
+        .padStart(2, "0")}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        delayChildren: 0.3,
-        staggerChildren: 0.2
-      }
+  const generateStreamKey = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let key = "";
+    for (let i = 0; i < 8; i++) {
+      key += chars[Math.floor(Math.random() * chars.length)];
     }
+    return key;
   };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.8,
-        ease: "easeOut"
-      }
-    }
-  };
+  const downloadStreamingScript = () => {
+    const key = streamKey || generateStreamKey();
+    setStreamKey(key);
 
-  const floatingVariants = {
-    animate: {
-      y: [-10, 10, -10],
-      transition: {
-        duration: 3,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
-    }
-  };
+    const scriptContent = `@echo off
+echo ========================================
+echo   Live Streaming Script
+echo   Stream Key: ${key}
+echo ========================================
+echo.
 
-  const features = [
-    {
-      icon: <Play className="w-6 h-6" />,
-      title: "Live Streaming",
-      description: "Stream your gameplay and content in ultra-HD with minimal latency"
-    },
-    {
-      icon: <Video className="w-6 h-6" />,
-      title: "Video Meetings",
-      description: "Professional video conferencing with crystal-clear quality"
-    },
-    {
-      icon: <Users className="w-6 h-6" />,
-      title: "Group Calling",
-      description: "Connect with multiple participants in seamless group calls"
-    },
-    {
-      icon: <Gamepad2 className="w-6 h-6" />,
-      title: "Gaming Hub",
-      description: "Built for gamers with low-latency communication and streaming"
-    }
-  ];
+REM Check if FFmpeg is available
+where ffmpeg >nul 2>&1
+if %errorlevel% neq 0 (
+  echo ERROR: FFmpeg is not installed or not in PATH
+  echo.
+  echo Please install FFmpeg from: https://ffmpeg.org/download.html
+  echo After installation, add FFmpeg to your system PATH
+  echo.
+  pause
+  exit /b 1
+)
+
+echo FFmpeg found successfully!
+echo.
+echo ========================================
+echo   STREAMING OPTIONS
+echo ========================================
+echo.
+echo 1. Stream a Monitor (Video Only)
+echo 2. Stream a Monitor (With Audio)
+echo 3. Stream Specific Window
+echo 4. Stream with Webcam Overlay
+echo 5. Custom Settings
+echo.
+set /p choice="Select option (1-5): "
+
+REM Set common parameters
+set STREAM_KEY=${key}
+set RTMP_URL=rtmp://localhost:1935/live/%STREAM_KEY%
+set FPS=30
+set QUALITY=medium
+
+if "%choice%"=="1" goto STREAM_MONITOR_NO_AUDIO
+if "%choice%"=="2" goto STREAM_MONITOR_WITH_AUDIO
+if "%choice%"=="3" goto WINDOW
+if "%choice%"=="4" goto WEBCAM
+if "%choice%"=="5" goto CUSTOM
+goto STREAM_MONITOR_NO_AUDIO
+
+:STREAM_MONITOR_NO_AUDIO
+call :SELECT_MONITOR
+if not defined OFFSET_X goto END
+echo.
+echo Starting screen capture (VIDEO ONLY) for Monitor @ %OFFSET_X%,%OFFSET_Y% [%VIDEO_SIZE%]...
+echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+echo.
+echo Press Ctrl+C to stop streaming
+echo.
+
+ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
+  -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+  -pix_fmt yuv420p -r %FPS% ^
+  -g 60 -keyint_min 60 -sc_threshold 0 ^
+  -b:v 4000k -maxrate 4500k -bufsize 9000k ^
+  -f flv "%RTMP_URL%"
+
+goto END
+
+:STREAM_MONITOR_WITH_AUDIO
+call :SELECT_MONITOR
+if not defined OFFSET_X goto END
+echo.
+echo Available audio devices:
+ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"  \\""
+echo.
+set /p audio_device="Enter audio device name (e.g., Microphone, Stereo Mix): "
+echo.
+echo Starting screen capture with audio for Monitor @ %OFFSET_X%,%OFFSET_Y% [%VIDEO_SIZE%]...
+echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+echo.
+echo Press Ctrl+C to stop streaming
+echo.
+
+ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
+  -f dshow -i audio="%audio_device%" ^
+  -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+  -pix_fmt yuv420p -r %FPS% ^
+  -g 60 -keyint_min 60 -sc_threshold 0 ^
+  -b:v 4000k -maxrate 4500k -bufsize 9000k ^
+  -c:a aac -ar 44100 -b:a 128k ^
+  -f flv "%RTMP_URL%"
+
+goto END
+
+:WINDOW
+echo.
+echo Position your mouse over the window you want to stream
+echo and note the window title from the taskbar
+echo.
+set /p window_title="Enter window title: "
+echo.
+echo Do you want to include audio? (y/n)
+set /p with_audio="Choice: "
+
+if /i "%with_audio%"=="y" (
+  echo.
+  echo Available audio devices:
+  ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"  \\""
+  echo.
+  set /p audio_device="Enter audio device name: "
+  echo.
+  echo Starting window capture with audio...
+  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+  echo.
+  echo Press Ctrl+C to stop streaming
+  echo.
+  
+  ffmpeg -f gdigrab -framerate %FPS% -i title="%window_title%" ^
+      -f dshow -i audio="%audio_device%" ^
+      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+      -pix_fmt yuv420p -r %FPS% ^
+      -g 60 -keyint_min 60 -sc_threshold 0 ^
+      -b:v 3000k -maxrate 3500k -bufsize 7000k ^
+      -c:a aac -ar 44100 -b:a 128k ^
+      -f flv "%RTMP_URL%"
+) else (
+  echo.
+  echo Starting window capture (VIDEO ONLY)...
+  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+  echo.
+  echo Press Ctrl+C to stop streaming
+  echo.
+  
+  ffmpeg -f gdigrab -framerate %FPS% -i title="%window_title%" ^
+      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+      -pix_fmt yuv420p -r %FPS% ^
+      -g 60 -keyint_min 60 -sc_threshold 0 ^
+      -b:v 3000k -maxrate 3500k -bufsize 7000k ^
+      -f flv "%RTMP_URL%"
+)
+
+goto END
+
+:WEBCAM
+call :SELECT_MONITOR
+if not defined OFFSET_X goto END
+echo.
+echo Detecting webcam devices...
+ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"DirectShow video devices" /C:"DirectShow audio devices" /C:"  \\""
+echo.
+set /p webcam="Enter webcam device name (or press Enter for default): "
+if "%webcam%"=="" set webcam="Integrated Camera"
+
+echo.
+echo Do you want to include audio? (y/n)
+set /p with_audio="Choice: "
+
+if /i "%with_audio%"=="y" (
+  echo.
+  set /p audio_device="Enter audio device name: "
+  echo.
+  echo Starting screen + webcam capture with audio...
+  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+  echo.
+  echo Press Ctrl+C to stop streaming
+  echo.
+  
+  ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
+      -f dshow -i video="%webcam%" ^
+      -f dshow -i audio="%audio_device%" ^
+      -filter_complex "[1:v]scale=320:240[webcam];[0:v][webcam]overlay=W-w-10:H-h-10[output]" ^
+      -map "[output]" -map 2:a ^
+      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+      -pix_fmt yuv420p -r %FPS% ^
+      -g 60 -keyint_min 60 -sc_threshold 0 ^
+      -b:v 4500k -maxrate 5000k -bufsize 10000k ^
+      -c:a aac -ar 44100 -b:a 128k ^
+      -f flv "%RTMP_URL%"
+) else (
+  echo.
+  echo Starting screen + webcam capture (VIDEO ONLY)...
+  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+  echo.
+  echo Press Ctrl+C to stop streaming
+  echo.
+  
+  ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
+      -f dshow -i video="%webcam%" ^
+      -filter_complex "[1:v]scale=320:240[webcam];[0:v][webcam]overlay=W-w-10:H-h-10[output]" ^
+      -map "[output]" ^
+      -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+      -pix_fmt yuv420p -r %FPS% ^
+      -g 60 -keyint_min 60 -sc_threshold 0 ^
+      -b:v 4500k -maxrate 5000k -bufsize 10000k ^
+      -f flv "%RTMP_URL%"
+)
+
+goto END
+
+:CUSTOM
+call :SELECT_MONITOR
+if not defined OFFSET_X goto END
+echo.
+echo ========================================
+echo   CUSTOM STREAMING SETTINGS
+echo ========================================
+echo.
+echo Selected Monitor Resolution: %VIDEO_SIZE%
+set /p resolution="Enter resolution (or press Enter for %VIDEO_SIZE%): "
+if not defined resolution set "resolution=%VIDEO_SIZE%"
+set /p bitrate="Enter video bitrate in kbps (e.g., 3000): "
+set /p fps_custom="Enter FPS (e.g., 30, 60): "
+set /p preset="Enter encoding preset (ultrafast/superfast/veryfast/faster/fast/medium): "
+
+echo.
+echo Do you want to include audio? (y/n)
+set /p with_audio="Choice: "
+
+if /i "%with_audio%"=="y" (
+  echo.
+  echo Available audio devices:
+  ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"  \\""
+  echo.
+  set /p audio_device="Enter audio device name: "
+  echo.
+  echo Starting custom stream with audio...
+  echo Resolution: %resolution%
+  echo Bitrate: %bitrate%kbps
+  echo FPS: %fps_custom%
+  echo Preset: %preset%
+  echo.
+  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+  echo.
+  echo Press Ctrl+C to stop streaming
+  echo.
+  
+  ffmpeg -f gdigrab -framerate %fps_custom% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
+      -f dshow -i audio="%audio_device%" ^
+      -c:v libx264 -preset %preset% -tune zerolatency ^
+      -pix_fmt yuv420p -r %fps_custom% ^
+      -s %resolution% ^
+      -g 60 -keyint_min 60 -sc_threshold 0 ^
+      -b:v %bitrate%k -maxrate %bitrate%k -bufsize %bitrate%k ^
+      -c:a aac -ar 44100 -b:a 128k ^
+      -f flv "%RTMP_URL%"
+) else (
+  echo.
+  echo Starting custom stream (VIDEO ONLY)...
+  echo Resolution: %resolution%
+  echo Bitrate: %bitrate%kbps
+  echo FPS: %fps_custom%
+  echo Preset: %preset%
+  echo.
+  echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+  echo.
+  echo Press Ctrl+C to stop streaming
+  echo.
+  
+  ffmpeg -f gdigrab -framerate %fps_custom% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
+      -c:v libx264 -preset %preset% -tune zerolatency ^
+      -pix_fmt yuv420p -r %fps_custom% ^
+      -s %resolution% ^
+      -g 60 -keyint_min 60 -sc_threshold 0 ^
+      -b:v %bitrate%k -maxrate %bitrate%k -bufsize %bitrate%k ^
+      -f flv "%RTMP_URL%"
+)
+
+goto END
+
+REM ======================================================================
+REM ==                      HELPER SUBROUTINES                        ==
+REM ======================================================================
+
+:SELECT_MONITOR
+@echo off
+echo.
+echo Detecting monitors...
+REM Use PowerShell to get monitor details and save to a temp file
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-Type -AssemblyName System.Windows.Forms; $i=0; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { $i++; Write-Output ('{0},{1},{2},{3},{4}' -f $i, $_.Bounds.X, $_.Bounds.Y, $_.Bounds.Width, $_.Bounds.Height) }" > "%TEMP%\\monitors.tmp" 2>nul
+
+set /a count=0
+for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
+  set /a count+=1
+  echo %%a. Monitor %%a (%%dx%%e at %%b,%%c)
+)
+
+if %count% LSS 1 (
+  echo ERROR: No monitors were detected, or PowerShell failed.
+  if exist "%TEMP%\\monitors.tmp" del "%TEMP%\\monitors.tmp"
+  pause
+  goto :EOF
+)
+
+if %count% EQU 1 (
+  echo Only one monitor found, selecting automatically.
+  set "monitor_choice=1"
+) else (
+  echo.
+  set /p monitor_choice="Select a monitor to stream (1-%count%): "
+)
+
+REM Basic input validation
+if not defined monitor_choice set "monitor_choice=1"
+for /l %%N in (1,1,%count%) do (
+  if "%monitor_choice%"=="%%N" set "is_valid=1"
+)
+if not defined is_valid set "monitor_choice=1"
+
+REM Find the chosen monitor's data
+for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
+  if "%%a"=="%monitor_choice%" (
+      set "OFFSET_X=%%b"
+      set "OFFSET_Y=%%c"
+      set "VIDEO_SIZE=%%dx%%e"
+  )
+)
+
+del "%TEMP%\\monitors.tmp"
+goto :EOF
+
+
+:END
+echo.
+echo ========================================
+echo Stream ended
+echo ========================================
+pause`;
+
+    const blob = new Blob([scriptContent], { type: "application/x-bat" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `stream_${key}.bat`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    setShowKeyModal(true);
+  };
 
   return (
-    <div className="min-h-screen relative">
-      {/* Hero Section */}
-      <motion.section 
-        className="relative min-h-screen flex items-center justify-center px-6"
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
-        <div className="max-w-7xl mx-auto text-center">
-          <motion.div
-            variants={itemVariants}
-            className="mb-8"
-          >
-            <motion.div
-              className="inline-flex items-center justify-center w-20 h-20 mb-6 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-600"
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              transition={{ type: "spring", stiffness: 400 }}
-            >
-              <Video className="w-10 h-10 text-white" />
-            </motion.div>
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              NexStream
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-300 mb-4 max-w-3xl mx-auto">
-              The next-gen hub for streaming, video calling, and squad communication
-            </p>
-            <p className="text-lg text-gray-400 mb-8 max-w-2xl mx-auto">
-              Whether you&apos;re streaming games or hosting professional meetings, NexStream delivers the performance you need
-            </p>
-          </motion.div>
-
-          <motion.div
-            variants={itemVariants}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
-          >
-            <motion.button
-              onClick={handleGetStarted}
-              className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold rounded-xl flex items-center gap-2 hover:shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Get Started <ArrowRight className="w-5 h-5" />
-            </motion.button>
-            <motion.button
-              className="px-8 py-4 border border-gray-600 text-gray-300 font-semibold rounded-xl hover:border-gray-500 hover:text-white transition-all duration-300"
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={()=>router.push('/sign-in')}
-            >
-              Sign in
-            </motion.button>
-          </motion.div>
-
-          {/* Floating Feature Cards */}
-          <motion.div
-            variants={itemVariants}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto"
-          >
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                className="p-6 bg-gray-800/50 backdrop-blur-sm rounded-2xl border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300"
-                variants={floatingVariants}
-                animate="animate"
-                style={{ animationDelay: `${index * 0.2}s` }}
-                whileHover={{ 
-                  scale: 1.05, 
-                  y: -5,
-                  boxShadow: "0 20px 40px rgba(139, 92, 246, 0.1)"
-                }}
+    <div className="min-h-screen bg-gray-900 text-gray-200">
+      <header className="bg-gray-800 border-b border-gray-700">
+        <div className="container mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <h1 className="text-3xl font-bold text-white">Live Streams</h1>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={downloadStreamingScript}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center space-x-2"
               >
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-500/20 to-purple-600/20 rounded-xl flex items-center justify-center mb-4 text-cyan-400">
-                  {feature.icon}
-                </div>
-                <h3 className="text-white font-semibold mb-2">{feature.title}</h3>
-                <p className="text-gray-400 text-sm">{feature.description}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
-      </motion.section>
-
-      {/* Features Section */}
-      <motion.section 
-        className="py-20 px-6"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={containerVariants}
-      >
-        <div className="max-w-7xl mx-auto">
-          <motion.div variants={itemVariants} className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
-              Built for Everyone
-            </h2>
-            <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              Whether you&apos;re streaming games or hosting professional meetings, NexStream delivers the performance you need
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* For Gamers */}
-            <motion.div variants={itemVariants} className="space-y-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                  <Gamepad2 className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-white">For Gamers</h3>
-              </div>
-              <div className="space-y-4">
-                {["Ultra-low latency streaming", "Real-time squad communication", "Game integration support", "Stream analytics"].map((item, index) => (
-                  <motion.div
-                    key={index}
-                    className="flex items-center gap-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                    <span className="text-gray-300">{item}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* For Professionals */}
-            <motion.div variants={itemVariants} className="space-y-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-white">For Professionals</h3>
-              </div>
-              <div className="space-y-4">
-                {["Enterprise-grade security", "HD video conferencing", "Screen sharing & recording", "Team collaboration tools"].map((item, index) => (
-                  <motion.div
-                    key={index}
-                    className="flex items-center gap-3"
-                    initial={{ opacity: 0, x: -20 }}
-                    whileInView={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <CheckCircle className="w-5 h-5 text-purple-500" />
-                    <span className="text-gray-300">{item}</span>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                  />
+                </svg>
+                <span>Start Streaming</span>
+              </button>
+            </div>
           </div>
         </div>
-      </motion.section>
+      </header>
 
-      {/* Why Choose Us Section */}
-      <motion.section 
-        className="py-20 px-6 bg-gray-900/50"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={containerVariants}
-      >
-        <div className="max-w-7xl mx-auto">
-          <motion.div variants={itemVariants} className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-              Why Choose NexStream?
+      {showKeyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-white mb-4">
+              Stream Downloaded!
             </h2>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Zap className="w-8 h-8" />,
-                title: "Lightning Fast",
-                description: "Ultra-low latency streaming and communication",
-                color: "from-yellow-400 to-orange-500"
-              },
-              {
-                icon: <Shield className="w-8 h-8" />,
-                title: "Secure & Reliable",
-                description: "Enterprise-grade security with 99.9% uptime",
-                color: "from-green-400 to-emerald-500"
-              },
-              {
-                icon: <Globe className="w-8 h-8" />,
-                title: "Global Reach",
-                description: "Worldwide CDN for optimal performance",
-                color: "from-blue-400 to-purple-500"
-              }
-            ].map((benefit, index) => (
-              <motion.div
-                key={index}
-                variants={itemVariants}
-                className="text-center p-8 bg-gray-800/30 backdrop-blur-sm rounded-2xl border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300"
-                whileHover={{ scale: 1.05, y: -5 }}
-              >
-                <div className={`w-16 h-16 mx-auto mb-6 bg-gradient-to-br ${benefit.color} rounded-2xl flex items-center justify-center text-white`}>
-                  {benefit.icon}
-                </div>
-                <h3 className="text-xl font-bold text-white mb-4">{benefit.title}</h3>
-                <p className="text-gray-400">{benefit.description}</p>
-              </motion.div>
-            ))}
+            <div className="bg-gray-900 rounded p-4 mb-4">
+              <p className="text-gray-400 text-sm mb-2">Your Stream Key:</p>
+              <p className="text-xl font-mono text-blue-400">{streamKey}</p>
+            </div>
+            <div className="space-y-2 text-gray-300 mb-6">
+              <p>✓ Streaming script downloaded</p>
+              <p>✓ Run the .bat file to start streaming</p>
+              <p>✓ Your stream will appear here automatically</p>
+            </div>
+            <div className="bg-yellow-900 bg-opacity-50 border border-yellow-700 rounded p-3 mb-4">
+              <p className="text-yellow-300 text-sm">
+                <strong>Audio Setup:</strong> The script will list available
+                audio devices. Common options include "Microphone" for mic audio
+                or "Stereo Mix" for system audio. To enable Stereo Mix:
+                Right-click sound icon → Sounds → Recording tab → Right-click
+                empty space → Show Disabled Devices → Enable Stereo Mix
+              </p>
+            </div>
+            <button
+              onClick={() => setShowKeyModal(false)}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              Got it!
+            </button>
           </div>
         </div>
-      </motion.section>
+      )}
 
-      {/* CTA Section */}
-      <motion.section 
-        className="py-20 px-6"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={containerVariants}
-      >
-        <motion.div 
-          variants={itemVariants}
-          className="max-w-4xl mx-auto text-center bg-gradient-to-r from-cyan-900/20 via-purple-900/20 to-pink-900/20 rounded-3xl p-12 border border-gray-700/50"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
-            Ready to Get Started?
+      <main className="container mx-auto px-4 py-8">
+        {isLoading && (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+              <p className="text-white mt-4">Loading streams...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-600 text-white p-4 rounded-lg mb-6">
+            <p>Error: {error}</p>
+          </div>
+        )}
+
+        {!isLoading && !error && streams.length === 0 && (
+          <div className="text-center py-16">
+            <svg
+              className="mx-auto h-24 w-24 text-gray-600 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+              />
+            </svg>
+            <h2 className="text-2xl font-semibold text-white mb-2">
+              No Live Streams
+            </h2>
+            <p className="text-gray-400 mb-8">
+              Be the first to start streaming!
+            </p>
+            <button
+              onClick={downloadStreamingScript}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition inline-flex items-center space-x-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                />
+              </svg>
+              <span>Download Streaming Script</span>
+            </button>
+          </div>
+        )}
+
+        {streams.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {streams.map((stream) => (
+              <Link
+                key={stream.id}
+                href={`/stream/${stream.streamKey}`}
+                className="group block bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition"
+              >
+                <div className="relative aspect-video bg-gray-900">
+                  <img
+                    src={`http://localhost:8000${stream.thumbnail}`}
+                    alt={`Stream ${stream.streamKey}`}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+
+                  <div className="absolute top-2 left-2 bg-red-600 px-2 py-1 rounded text-xs font-semibold text-white">
+                    LIVE
+                  </div>
+
+                  <div className="absolute bottom-2 left-2 flex items-center text-white text-sm">
+                    <svg
+                      className="w-4 h-4 mr-1"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                      <path
+                        fillRule="evenodd"
+                        d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    {stream.viewers} watching
+                  </div>
+
+                  <div className="absolute bottom-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">
+                    {formatDuration(stream.duration)}
+                  </div>
+                </div>
+
+                <div className="p-4">
+                  <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition">
+                    {stream.streamKey}
+                  </h3>
+                  <div className="mt-2 flex items-center justify-between text-sm text-gray-400">
+                    <span>{Math.round(stream.bitrate / 1000)} kbps</span>
+                    <span>{stream.fps} FPS</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-12 bg-gray-800 rounded-lg p-8">
+          <h2 className="text-2xl font-bold text-white mb-6">
+            Quick Start Guide
           </h2>
-          <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-            Join thousands of gamers and professionals who trust NexStream for their streaming and communication needs.
-          </p>
-          <motion.button
-            onClick={handleGetStarted}
-            className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-bold text-lg rounded-xl hover:shadow-2xl hover:shadow-purple-500/25 transition-all duration-300"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Start Free Trial
-          </motion.button>
-        </motion.div>
-      </motion.section>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                Prerequisites
+              </h3>
+              <div className="space-y-3 text-gray-300">
+                <div className="flex items-start">
+                  <span className="text-blue-500 font-bold mr-2">•</span>
+                  <div>
+                    <p className="font-semibold">FFmpeg Installation</p>
+                    <p className="text-sm text-gray-400">
+                      Download from ffmpeg.org and add to PATH
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-blue-500 font-bold mr-2">•</span>
+                  <div>
+                    <p className="font-semibold">NMS Server</p>
+                    <p className="text-sm text-gray-400">
+                      Must be running on port 1935
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-blue-500 font-bold mr-2">•</span>
+                  <div>
+                    <p className="font-semibold">Audio Setup (Optional)</p>
+                    <p className="text-sm text-gray-400">
+                      Enable "Stereo Mix" for system audio or use "Microphone"
+                      for mic input
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold text-white mb-3">
+                How to Stream
+              </h3>
+              <div className="space-y-3 text-gray-300">
+                <div className="flex items-start">
+                  <span className="text-green-500 font-bold mr-2">1.</span>
+                  <p>Click "Start Streaming" to download the script</p>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-green-500 font-bold mr-2">2.</span>
+                  <p>Run the downloaded .bat file</p>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-green-500 font-bold mr-2">3.</span>
+                  <p>
+                    Choose your streaming option and select a monitor if
+                    prompted
+                  </p>
+                </div>
+                <div className="flex items-start">
+                  <span className="text-green-500 font-bold mr-2">4.</span>
+                  <p>Your stream appears here automatically!</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-gray-900 rounded">
+            <h4 className="text-sm font-semibold text-gray-400 mb-2">
+              Server Configuration
+            </h4>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-gray-500">RTMP URL:</span>
+                <span className="text-gray-300 ml-2">
+                  rtmp://localhost:1935/live
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500">HLS Output:</span>
+                <span className="text-gray-300 ml-2">360p, 720p, 1080p</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
   );
-};
-
-export default LandingPage;
+}
