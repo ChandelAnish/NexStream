@@ -2,6 +2,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import Hls from 'hls.js';
 
@@ -37,7 +38,7 @@ export default function StreamPage() {
 
     const fetchStreamInfo = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/streams/${streamKey}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/streams/${streamKey}`);
         if (!response.ok) {
           throw new Error('Stream not found or has ended.');
         }
@@ -62,7 +63,7 @@ export default function StreamPage() {
     if (!streamKey || !videoRef.current) return;
 
     const video = videoRef.current;
-    const hlsUrl = `http://localhost:8000/hls/${streamKey}/master.m3u8`;
+    const hlsUrl = `${process.env.NEXT_PUBLIC_MEDIA_URL}/hls/${streamKey}/master.m3u8`;
 
     // Ensure we only initialize HLS once
     if (hlsRef.current) {
@@ -153,9 +154,9 @@ export default function StreamPage() {
         <div className="text-center">
           <h1 className="text-4xl font-bold text-red-500 mb-4">Stream Error</h1>
           <p className="text-white text-lg">{error}</p>
-          <a href="/" className="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700">
+          <Link href="/" className="mt-4 inline-block px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700">
             Back to Home
-          </a>
+          </Link>
         </div>
       </div>
     );

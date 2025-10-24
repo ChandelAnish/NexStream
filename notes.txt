@@ -2080,3 +2080,74 @@ Node Media Server
                 - The stream is now live at: https://yourdomain.com/live/user123-1694801200/index.m3u8
                 - Any viewer loading that link in an HLS player (on your Next.js site) will see the stream almost instantly (1–5 sec latency).
 ------------
+
+
+
+
+
+------------
+Set server URL to my LAN still why localhost works ?
+        NEXT_PUBLIC_SERVER_URL=http://192.168.29.11:3000
+
+        But when you open
+        👉 http://localhost:3000/stream/zbwov8cm,
+
+        it still works because: 
+                1. localhost and 192.168.29.11 both point to the same machine.
+
+                        - localhost → loopback IP (127.0.0.1)
+                        - 192.168.29.11 → your LAN IP
+
+                        Both resolve to your computer, just through different interfaces.
+
+                2. Your Next.js dev server listens on all interfaces by default (0.0.0.0). So both URLs reach the same backend.
+
+
+        🧩 Quick mental model :
+
+                URL accessed	                Who it connects to	                        When to use
+
+                http://localhost:3000	        only works on the same PC	                testing alone
+                http://192.168.29.11:3000	accessible to other devices on same Wi-Fi	for LAN testing
+                (Deployed URL, e.g. Vercel)	public internet	                                remote access
+
+
+        ✅ What this means for you
+        If you want other devices (like another laptop or phone on the same Wi-Fi) to watch the stream: You must use the LAN IP.
+        If you use localhost on that second device, it’ll look for a server on itself, not your PC — and won’t find anything.
+
+
+
+
+
+        ***8localhost and 192.168.29.11 both point to the same machine then why on using NEXT_PUBLIC_SERVER_URL=http://localhost:3000 it was not ccessible to other devices on same Wi-Fi
+
+
+                🧩 Key idea
+                        Even though localhost and 192.168.29.11 both refer to the same computer, they belong to different network interfaces:
+
+                                Interface	IP Address	                Who can access it
+                                Loopback	127.0.0.1 (or localhost)	only your own computer
+                                LAN (Wi-Fi)	192.168.29.11	                other devices on your Wi-Fi network
+
+
+                🖥️ What happens when you use localhost
+
+                        - When you set: NEXT_PUBLIC_SERVER_URL=http://localhost:3000 and start your Next.js app, your app makes network requests to localhost.
+                        - From your own PC: ✅ Works fine, because localhost = “me”.
+                        - From another device: ❌ Fails, because that device tries to connect to itself, not your PC.
+
+                Example:
+                        Your phone opens http://localhost:3000.
+                        That means: “Hey phone, talk to your own port 3000” → but nothing’s there.
+
+
+                🌐 Why 192.168.29.11 fixes it
+                        - When you use: NEXT_PUBLIC_SERVER_URL=http://192.168.29.11:3000
+                        - Now your browser (and other devices) explicitly connect to your PC’s Wi-Fi IP, which:
+
+                                - is reachable from other devices on the same network,
+                                - points to the same Next.js server instance.
+
+                        - That’s why LAN access only works when using the local network IP, not localhost.
+------------

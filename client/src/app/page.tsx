@@ -24,7 +24,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchStreams = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/streams");
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/streams`);
         if (!response.ok) {
           throw new Error("Failed to fetch streams");
         }
@@ -107,7 +107,7 @@ set /p choice="Select option (1-2): "
 
 REM Set common parameters
 set STREAM_KEY=${key}
-set RTMP_URL=rtmp://localhost:1935/live/%STREAM_KEY%
+    set RTMP_URL=${process.env.NEXT_PUBLIC_RTMP_URL}/%STREAM_KEY%
 set FPS=30
 set QUALITY=medium
 
@@ -161,7 +161,7 @@ if not defined OFFSET_X goto END
 
 echo.
 echo Starting screen capture (VIDEO ONLY) for Monitor @ !OFFSET_X!,!OFFSET_Y! [!VIDEO_SIZE!]...
-echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+    echo Stream will be available at: ${process.env.NEXT_PUBLIC_SERVER_URL}/stream/%STREAM_KEY%
 echo.
 echo Press Ctrl+C to stop streaming
 echo.
@@ -223,7 +223,7 @@ set "audio_device=Stereo Mix (Realtek(R) Audio)"
 
 echo.
 echo Starting screen capture with audio (Stereo Mix) for Monitor @ !OFFSET_X!,!OFFSET_Y! [!VIDEO_SIZE!]...
-echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+    echo Stream will be available at: ${process.env.NEXT_PUBLIC_SERVER_URL}/stream/%STREAM_KEY%
 echo.
 echo Press Ctrl+C to stop streaming
 echo.
@@ -313,8 +313,8 @@ pause`;
             </div>
             <div className="bg-yellow-900 bg-opacity-50 border border-yellow-700 rounded p-3 mb-4">
               <p className="text-yellow-300 text-sm">
-                <strong>Audio Setup:</strong> The "With Audio" option defaults
-                to <strong>"Stereo Mix"</strong> for system audio. To enable
+                <strong>Audio Setup:</strong> The &quot;With Audio&quot; option defaults
+                to <strong>&quot;Stereo Mix&quot;</strong> for system audio. To enable
                 Stereo Mix: Right-click sound icon → Sounds → Recording tab →
                 Right-click empty space → Show Disabled Devices → Enable Stereo
                 Mix.
@@ -399,7 +399,7 @@ pause`;
               >
                 <div className="relative aspect-video bg-gray-900">
                   <img
-                    src={`http://localhost:8000${stream.thumbnail}`}
+                    src={`${process.env.NEXT_PUBLIC_MEDIA_URL}${stream.thumbnail}`}
                     alt={`Stream ${stream.streamKey}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -483,7 +483,7 @@ pause`;
                   <div>
                     <p className="font-semibold">Audio Setup (Optional)</p>
                     <p className="text-sm text-gray-400">
-                      Enable "Stereo Mix" for system audio (now default)
+                      Enable &quot;Stereo Mix&quot; for system audio (now default)
                     </p>
                   </div>
                 </div>
@@ -497,7 +497,7 @@ pause`;
               <div className="space-y-3 text-gray-300">
                 <div className="flex items-start">
                   <span className="text-green-500 font-bold mr-2">1.</span>
-                  <p>Click "Start Streaming" to download the script</p>
+                  <p>Click &quot;Start Streaming&quot; to download the script</p>
                 </div>
                 <div className="flex items-start">
                   <span className="text-green-500 font-bold mr-2">2.</span>
@@ -526,7 +526,7 @@ pause`;
               <div>
                 <span className="text-gray-500">RTMP URL:</span>
                 <span className="text-gray-300 ml-2">
-                  rtmp://localhost:1935/live
+                  {process.env.NEXT_PUBLIC_RTMP_URL}
                 </span>
               </div>
               <div>
