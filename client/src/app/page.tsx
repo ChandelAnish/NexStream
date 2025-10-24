@@ -70,7 +70,7 @@ export default function HomePage() {
     const key = streamKey || generateStreamKey();
     setStreamKey(key);
 
-    const scriptVersion = "V8_SMOOTH_AUDIO_FIX"; // Updated version marker
+    const scriptVersion = "V9_INTERLEAVE_FIX"; // Updated version marker
 
     // --- START OF SCRIPT CONTENT ---
     const scriptContent = `@echo off
@@ -228,15 +228,19 @@ echo.
 echo Press Ctrl+C to stop streaming
 echo.
 
-REM *** FIX: Added -thread_queue_size to both inputs ***
-ffmpeg -thread_queue_size 1024 -f gdigrab -framerate %FPS% -offset_x !OFFSET_X! -offset_y !OFFSET_Y! -video_size !VIDEO_SIZE! -i desktop ^
-    -thread_queue_size 1024 -f dshow -i audio="!audio_device!" ^
-    -vf "format=pix_fmts=yuv420p" ^
+REM *** FIX: Video smoothness with audio - prevent audio from blocking video encoding ***
+ffmpeg -rtbufsize 1500M -f gdigrab -framerate %FPS% -offset_x !OFFSET_X! -offset_y !OFFSET_Y! -video_size !VIDEO_SIZE! -i desktop ^
+    -f dshow -audio_buffer_size 100 -i audio="!audio_device!" ^
     -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+    -pix_fmt yuv420p ^
     -r %FPS% ^
     -g 60 -keyint_min 60 -sc_threshold 0 ^
     -b:v 4000k -maxrate 4500k -bufsize 9000k ^
     -c:a aac -ar 44100 -b:a 128k ^
+    -shortest ^
+    -max_interleave_delta 0 ^
+    -avoid_negative_ts make_zero ^
+    -fflags +genpts+igndts ^
     -f flv "%RTMP_URL%"
 goto END
 
