@@ -47,7 +47,7 @@ export default function HomePage() {
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
+    const secs = Math.floor(seconds % 60); // Use Math.floor for seconds too
 
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, "0")}:${secs
@@ -70,15 +70,20 @@ export default function HomePage() {
     const key = streamKey || generateStreamKey();
     setStreamKey(key);
 
+    const scriptVersion = "V8_SMOOTH_AUDIO_FIX"; // Updated version marker
+
+    // --- START OF SCRIPT CONTENT ---
     const scriptContent = `@echo off
+setlocal enabledelayedexpansion
 echo ========================================
 echo   Live Streaming Script
 echo   Stream Key: ${key}
+echo   SCRIPT VERSION: ${scriptVersion}
 echo ========================================
 echo.
 
 REM Check if FFmpeg is available
-where ffmpeg >nul 2>&1
+where ffmpeg >nul 2>1
 if %errorlevel% neq 0 (
     echo ERROR: FFmpeg is not installed or not in PATH
     echo.
@@ -111,76 +116,20 @@ if "%choice%"=="2" goto STREAM_MONITOR_WITH_AUDIO
 goto STREAM_MONITOR_NO_AUDIO
 
 :STREAM_MONITOR_NO_AUDIO
-setlocal enabledelayedexpansion
-call :SELECT_MONITOR
-if not defined OFFSET_X goto END
-echo.
-echo Starting screen capture (VIDEO ONLY) for Monitor @ !OFFSET_X!,!OFFSET_Y! [!VIDEO_SIZE!]...
-echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-echo.
-echo Press Ctrl+C to stop streaming
-echo.
-
-ffmpeg -f gdigrab -framerate %FPS% -offset_x !OFFSET_X! -offset_y !OFFSET_Y! -video_size !VIDEO_SIZE! -i desktop ^
-    -vf "format=pix_fmts=yuv420p" ^
-    -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-    -r %FPS% ^
-    -g 60 -keyint_min 60 -sc_threshold 0 ^
-    -b:v 4000k -maxrate 4500k -bufsize 9000k ^
-    -f flv "%RTMP_URL%"
-
-goto END
-
-:STREAM_MONITOR_WITH_AUDIO
-call :SELECT_MONITOR
-if not defined OFFSET_X goto END
-echo.
-echo Available audio devices:
-ffmpeg -list_devices true -f dshow -i dummy 2>&1 | findstr /C:"  \\""
-echo.
-set /p audio_device="Enter audio device name (e.g., Microphone, Stereo Mix): "
-echo.
-echo Starting screen capture with audio for Monitor @ %OFFSET_X%,%OFFSET_Y% [%VIDEO_SIZE%]...
-echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
-echo.
-echo Press Ctrl+C to stop streaming
-echo.
-
-ffmpeg -f gdigrab -framerate %FPS% -offset_x %OFFSET_X% -offset_y %OFFSET_Y% -video_size %VIDEO_SIZE% -i desktop ^
-    -f dshow -i audio="%audio_device%" ^
-    -vf "format=pix_fmts=yuv420p" ^
-    -c:v libx264 -preset %QUALITY% -tune zerolatency ^
-    -r %FPS% ^
-    -g 60 -keyint_min 60 -sc_threshold 0 ^
-    -b:v 4000k -maxrate 4500k -bufsize 9000k ^
-    -c:a aac -ar 44100 -b:a 128k ^
-    -f flv "%RTMP_URL%"
-
-goto END
-
-REM ======================================================================
-REM ==                      HELPER SUBROUTINES                        ==
-REM ======================================================================
-
-:SELECT_MONITOR
-@echo off
 echo.
 echo Detecting monitors...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-Type -AssemblyName System.Windows.Forms; $i=0; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { $i++; Write-Output ('{0},{1},{2},{3},{4}' -f $i, $_.Bounds.X, $_.Bounds.Y, $_.Bounds.Width, $_.Bounds.Height) }" > "%TEMP%\\monitors.tmp" 2>nul
-
 set /a count=0
 for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
     set /a count+=1
     echo %%a. Monitor %%a (%%dx%%e at %%b,%%c)
 )
-
 if %count% LSS 1 (
     echo ERROR: No monitors were detected, or PowerShell failed.
     if exist "%TEMP%\\monitors.tmp" del "%TEMP%\\monitors.tmp"
     pause
-    goto :EOF
+    goto END
 )
-
 if %count% EQU 1 (
     echo Only one monitor found, selecting automatically.
     set "monitor_choice=1"
@@ -188,13 +137,11 @@ if %count% EQU 1 (
     echo.
     set /p monitor_choice="Select a monitor to stream (1-%count%): "
 )
-
 set "is_valid="
 for /l %%N in (1,1,%count%) do (
     if "%monitor_choice%"=="%%N" set "is_valid=1"
 )
 if not defined is_valid set "monitor_choice=1"
-
 for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
     if "%%a"=="%monitor_choice%" (
         set "OFFSET_X=%%b"
@@ -203,18 +150,95 @@ for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
         set "VIDEO_HEIGHT=%%e"
     )
 )
-
 echo.
 set /p SCALE_PERCENT="Enter display scaling percentage (e.g., 100, 125) [default: 100]: "
 if "%SCALE_PERCENT%"=="" set "SCALE_PERCENT=100"
-
-REM Calculate the final resolution based on scaling
 set /a "VIDEO_WIDTH=!VIDEO_WIDTH! * %SCALE_PERCENT% / 100"
 set /a "VIDEO_HEIGHT=!VIDEO_HEIGHT! * %SCALE_PERCENT% / 100"
 set "VIDEO_SIZE=!VIDEO_WIDTH!x!VIDEO_HEIGHT!"
-
 del "%TEMP%\\monitors.tmp"
-goto :EOF
+if not defined OFFSET_X goto END
+
+echo.
+echo Starting screen capture (VIDEO ONLY) for Monitor @ !OFFSET_X!,!OFFSET_Y! [!VIDEO_SIZE!]...
+echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+echo.
+echo Press Ctrl+C to stop streaming
+echo.
+ffmpeg -f gdigrab -framerate %FPS% -offset_x !OFFSET_X! -offset_y !OFFSET_Y! -video_size !VIDEO_SIZE! -i desktop ^
+    -vf "format=pix_fmts=yuv420p" ^
+    -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+    -r %FPS% ^
+    -g 60 -keyint_min 60 -sc_threshold 0 ^
+    -b:v 4000k -maxrate 4500k -bufsize 9000k ^
+    -f flv "%RTMP_URL%"
+goto END
+
+:STREAM_MONITOR_WITH_AUDIO
+echo.
+echo Detecting monitors...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-Type -AssemblyName System.Windows.Forms; $i=0; [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { $i++; Write-Output ('{0},{1},{2},{3},{4}' -f $i, $_.Bounds.X, $_.Bounds.Y, $_.Bounds.Width, $_.Bounds.Height) }" > "%TEMP%\\monitors.tmp" 2>nul
+set /a count=0
+for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
+    set /a count+=1
+    echo %%a. Monitor %%a (%%dx%%e at %%b,%%c)
+)
+if %count% LSS 1 (
+    echo ERROR: No monitors were detected, or PowerShell failed.
+    if exist "%TEMP%\\monitors.tmp" del "%TEMP%\\monitors.tmp"
+    pause
+    goto END
+)
+if %count% EQU 1 (
+    echo Only one monitor found, selecting automatically.
+    set "monitor_choice=1"
+) else (
+    echo.
+    set /p monitor_choice="Select a monitor to stream (1-%count%): "
+)
+set "is_valid="
+for /l %%N in (1,1,%count%) do (
+    if "%monitor_choice%"=="%%N" set "is_valid=1"
+)
+if not defined is_valid set "monitor_choice=1"
+for /f "usebackq tokens=1-5 delims=," %%a in ("%TEMP%\\monitors.tmp") do (
+    if "%%a"=="%monitor_choice%" (
+        set "OFFSET_X=%%b"
+        set "OFFSET_Y=%%c"
+        set "VIDEO_WIDTH=%%d"
+        set "VIDEO_HEIGHT=%%e"
+    )
+)
+echo.
+set /p SCALE_PERCENT="Enter display scaling percentage (e.g., 100, 125) [default: 100]: "
+if "%SCALE_PERCENT%"=="" set "SCALE_PERCENT=100"
+set /a "VIDEO_WIDTH=!VIDEO_WIDTH! * %SCALE_PERCENT% / 100"
+set /a "VIDEO_HEIGHT=!VIDEO_HEIGHT! * %SCALE_PERCENT% / 100"
+set "VIDEO_SIZE=!VIDEO_WIDTH!x!VIDEO_HEIGHT!"
+del "%TEMP%\\monitors.tmp"
+if not defined OFFSET_X goto END
+
+REM Set audio device to the exact name found by FFmpeg
+set "audio_device=Stereo Mix (Realtek(R) Audio)"
+
+echo.
+echo Starting screen capture with audio (Stereo Mix) for Monitor @ !OFFSET_X!,!OFFSET_Y! [!VIDEO_SIZE!]...
+echo Stream will be available at: http://localhost:3000/stream/%STREAM_KEY%
+echo.
+echo Press Ctrl+C to stop streaming
+echo.
+
+REM *** FIX: Added -thread_queue_size to both inputs ***
+ffmpeg -thread_queue_size 1024 -f gdigrab -framerate %FPS% -offset_x !OFFSET_X! -offset_y !OFFSET_Y! -video_size !VIDEO_SIZE! -i desktop ^
+    -thread_queue_size 1024 -f dshow -i audio="!audio_device!" ^
+    -vf "format=pix_fmts=yuv420p" ^
+    -c:v libx264 -preset %QUALITY% -tune zerolatency ^
+    -r %FPS% ^
+    -g 60 -keyint_min 60 -sc_threshold 0 ^
+    -b:v 4000k -maxrate 4500k -bufsize 9000k ^
+    -c:a aac -ar 44100 -b:a 128k ^
+    -f flv "%RTMP_URL%"
+goto END
 
 :END
 echo.
@@ -222,6 +246,7 @@ echo ========================================
 echo Stream ended
 echo ========================================
 pause`;
+    // --- END OF SCRIPT CONTENT ---
 
     const blob = new Blob([scriptContent], { type: "application/x-bat" });
     const url = URL.createObjectURL(blob);
@@ -284,11 +309,11 @@ pause`;
             </div>
             <div className="bg-yellow-900 bg-opacity-50 border border-yellow-700 rounded p-3 mb-4">
               <p className="text-yellow-300 text-sm">
-                <strong>Audio Setup:</strong> The script will list available
-                audio devices. Common options include "Microphone" for mic audio
-                or "Stereo Mix" for system audio. To enable Stereo Mix:
-                Right-click sound icon → Sounds → Recording tab → Right-click
-                empty space → Show Disabled Devices → Enable Stereo Mix
+                <strong>Audio Setup:</strong> The "With Audio" option defaults
+                to <strong>"Stereo Mix"</strong> for system audio. To enable
+                Stereo Mix: Right-click sound icon → Sounds → Recording tab →
+                Right-click empty space → Show Disabled Devices → Enable Stereo
+                Mix.
               </p>
             </div>
             <button
@@ -376,6 +401,8 @@ pause`;
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = "none";
+                      // You could also set a placeholder image here
+                      // target.src = "/placeholder-image.png";
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -452,8 +479,7 @@ pause`;
                   <div>
                     <p className="font-semibold">Audio Setup (Optional)</p>
                     <p className="text-sm text-gray-400">
-                      Enable "Stereo Mix" for system audio or use "Microphone"
-                      for mic input
+                      Enable "Stereo Mix" for system audio (now default)
                     </p>
                   </div>
                 </div>
