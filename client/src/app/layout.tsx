@@ -16,7 +16,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative overflow-hidden">
+      {/* FIX: Removed "overflow-hidden" from the body's className.
+        This class was preventing the entire page from scrolling.
+      */}
+      <body className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black relative">
         {/* Animated gradient background */}
         <div className="fixed inset-0 bg-gradient-to-br from-cyan-900/20 via-purple-900/20 to-pink-900/20 animate-pulse pointer-events-none"></div>
         
@@ -41,6 +44,7 @@ export default function RootLayout({
         <StoreProvider>
           <CssBaseline />
           <AuthProvider>
+            {/* This relative div ensures children appear above the fixed background elements */}
             <div className="relative z-10">
               {children}
             </div>
