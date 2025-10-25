@@ -13,9 +13,12 @@ import {
   Star,
   Plus,
   Wifi,
-  WifiOff
+  WifiOff,
+  LogOut // 1. Imported LogOut icon
 } from 'lucide-react';
-import { useRouter } from 'next/navigation'
+import { useRouter } from 'next/navigation';
+import { auth } from '../../../firebase/config';
+import { signOut } from 'firebase/auth';
 
 
 interface RecentCall {
@@ -80,6 +83,21 @@ const Dashboard: React.FC = () => {
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // 4. Added Logout Handler
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // Clear any relevant session/local storage
+      window.sessionStorage.removeItem('userData');
+      window.sessionStorage.removeItem('signupFormData');
+      // Redirect to sign-in page
+      router.push('/sign-in');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+      // Optionally show an error message to the user
+    }
+  };
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -203,9 +221,15 @@ const Dashboard: React.FC = () => {
                 <Bell className="w-5 h-5" />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
               </button>
-              <div className="w-8 h-8 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
+              
+              {/* 5. Replaced User icon with Logout Button */}
+              <button 
+                onClick={handleLogout}
+                title="Logout"
+                className="w-8 h-8 bg-gradient-to-br from-red-500 to-pink-600 rounded-full flex items-center justify-center text-white hover:from-red-600 hover:to-pink-700 transition-all duration-300"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
