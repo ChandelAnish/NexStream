@@ -214,13 +214,6 @@ export default function SignInForm() {
                 </div>
               </div>
 
-              {/* Forgot password */}
-              <div className="flex justify-end">
-                <Link href="/forgot-password" className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors">
-                  Forgot Password?
-                </Link>
-              </div>
-
               {/* Sign in button */}
               <motion.button
                 type="submit"
