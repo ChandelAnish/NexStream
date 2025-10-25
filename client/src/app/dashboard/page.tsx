@@ -156,6 +156,7 @@ const Dashboard: React.FC = () => {
 
   const handleStreaming = (): void => {
     console.log('Streaming');
+    router.push('/stream');
   };
 
   const handleCallPeer = (peerId: string): void => {
