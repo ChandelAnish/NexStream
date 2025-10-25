@@ -16,9 +16,18 @@ import {
 import { realtimeDB } from "../../../../../firebase/config";
 import { useSignal } from "@/contexts/SignalContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Mic, MicOff, Video, VideoOff, Phone, StopCircle, 
-  User, Clock, AlertTriangle 
+import {
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Phone,
+  StopCircle,
+  User,
+  Clock,
+  AlertTriangle,
+  ScreenShare, // Import new icon
+  ScreenShareOff, // Import new icon
 } from "lucide-react";
 import { IoMdRecording } from "react-icons/io";
 
@@ -40,12 +49,17 @@ const RoomPage: React.FC = () => {
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isScreenSharing, setIsScreenSharing] = useState(false); // State for screen share
   const [isRemoteConnected, setIsRemoteConnected] = useState(false);
   const [meetingDuration, setMeetingDuration] = useState(0);
   const [alerts, setAlerts] = useState<AlertType[]>([]);
   const durationInterval = useRef<NodeJS.Timeout | null>(null);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<BlobPart[]>([]);
+
+  // Refs to store tracks for switching
+  const localVideoTrack = useRef<MediaStreamTrack | null>(null);
+  const screenStream = useRef<MediaStream | null>(null);
 
   const { callResponse, updateCallStatus, ringingCallee } = useSignal();
   const router = useRouter();
@@ -54,7 +68,7 @@ const RoomPage: React.FC = () => {
   const showAlert = (message: string, type: "info" | "success" | "error") => {
     const id = Math.random().toString(36).substring(2, 9);
     setAlerts((prev) => [...prev, { message, type, id }]);
-    
+
     setTimeout(() => {
       setAlerts((prev) => prev.filter((alert) => alert.id !== id));
     }, 5000);
@@ -65,12 +79,14 @@ const RoomPage: React.FC = () => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     return [
-      hours > 0 ? String(hours).padStart(2, '0') : null,
-      String(minutes).padStart(2, '0'),
-      String(secs).padStart(2, '0')
-    ].filter(Boolean).join(':');
+      hours > 0 ? String(hours).padStart(2, "0") : null,
+      String(minutes).padStart(2, "0"),
+      String(secs).padStart(2, "0"),
+    ]
+      .filter(Boolean)
+      .join(":");
   };
 
   useEffect(() => {
@@ -117,7 +133,7 @@ const RoomPage: React.FC = () => {
             remoteStream.current.addTrack(track);
           });
           setIsRemoteConnected(true);
-          
+
           // Start the meeting duration timer when connection is established
           if (!durationInterval.current) {
             durationInterval.current = setInterval(() => {
@@ -138,6 +154,13 @@ const RoomPage: React.FC = () => {
             audio: true,
           });
           localStream.current = stream;
+
+          // Store the original video track
+          const videoTrack = stream.getVideoTracks()[0];
+          if (videoTrack) {
+            localVideoTrack.current = videoTrack;
+          }
+
           if (localVideoRef.current) {
             localVideoRef.current.srcObject = stream;
           }
@@ -177,8 +200,8 @@ const RoomPage: React.FC = () => {
               await peerConnection.current?.setRemoteDescription(answer);
             }
           });
-          ringingCallee(roomName)
-          console.log("ready")
+          ringingCallee(roomName);
+          console.log("ready");
         } else {
           await setupConnection();
           await openUserMedia();
@@ -223,6 +246,9 @@ const RoomPage: React.FC = () => {
     }
 
     return () => {
+      if (isScreenSharing) {
+        stopScreenShare();
+      }
       peerConnection.current?.close();
       peerConnection.current = null;
       localStream.current?.getTracks().forEach((track) => track.stop());
@@ -233,7 +259,44 @@ const RoomPage: React.FC = () => {
     };
   }, [roomName]);
 
+  const stopScreenShare = async () => {
+    if (!isScreenSharing || !peerConnection.current) return;
+
+    try {
+      // Stop the screen sharing tracks
+      screenStream.current?.getTracks().forEach((track) => track.stop());
+      screenStream.current = null;
+
+      // Find the video sender
+      const videoSender = peerConnection.current
+        .getSenders()
+        .find((sender) => sender.track?.kind === "video");
+
+      if (videoSender && localVideoTrack.current) {
+        await videoSender.replaceTrack(localVideoTrack.current);
+        setIsScreenSharing(false);
+
+        // Restore local video preview to camera
+        if (localVideoRef.current && localStream.current) {
+          localVideoRef.current.srcObject = localStream.current;
+        }
+        showAlert("Screen sharing stopped", "info");
+
+        // If video was meant to be off, re-disable the track
+        if (isVideoOff) {
+          localVideoTrack.current.enabled = false;
+        }
+      }
+    } catch (err) {
+      console.error("Error stopping screen share:", err);
+      showAlert("Failed to stop screen sharing", "error");
+    }
+  };
+
   const handleEndCall = () => {
+    if (isScreenSharing) {
+      stopScreenShare();
+    }
     if (isRecording) {
       stopRecording();
     }
@@ -250,24 +313,19 @@ const RoomPage: React.FC = () => {
   const toggleAudio = () => {
     if (localStream.current) {
       const audioTracks = localStream.current.getAudioTracks();
-
-      // Get the new state (opposite of current state)
       const newMuteState = !isAudioMuted;
 
-      // Enable/disable the tracks based on mute state
       audioTracks.forEach((track) => {
-        track.enabled = !newMuteState; // enabled = true when not muted
+        track.enabled = !newMuteState;
       });
 
-      // Update the state
       setIsAudioMuted(newMuteState);
 
-      // Find the sender in the peer connection that corresponds to the audio track
       if (peerConnection.current) {
         const senders = peerConnection.current.getSenders();
         senders.forEach((sender) => {
           if (sender.track && sender.track.kind === "audio") {
-            sender.track.enabled = !newMuteState; // enabled = true when not muted
+            sender.track.enabled = !newMuteState;
           }
         });
       }
@@ -275,29 +333,106 @@ const RoomPage: React.FC = () => {
   };
 
   const toggleVideo = () => {
+    if (isScreenSharing) {
+      // If sharing, stop sharing first and then turn off video
+      stopScreenShare();
+      if (localStream.current) {
+        const videoTracks = localStream.current.getVideoTracks();
+        videoTracks.forEach((track) => {
+          track.enabled = false; // Force disable
+        });
+        setIsVideoOff(true);
+
+        // Update sender
+        if (peerConnection.current) {
+          const senders = peerConnection.current.getSenders();
+          senders.forEach((sender) => {
+            if (sender.track && sender.track.kind === "video") {
+              sender.track.enabled = false;
+            }
+          });
+        }
+      }
+      return; // Exit
+    }
+
+    // Regular video toggle logic
     if (localStream.current) {
       const videoTracks = localStream.current.getVideoTracks();
-
-      // Get the new state (opposite of current state)
       const newVideoOffState = !isVideoOff;
 
-      // Enable/disable the tracks based on video off state
       videoTracks.forEach((track) => {
-        track.enabled = !newVideoOffState; // enabled = true when video is on
+        track.enabled = !newVideoOffState;
       });
 
-      // Update the state
       setIsVideoOff(newVideoOffState);
 
-      // Find the sender in the peer connection that corresponds to the video track
       if (peerConnection.current) {
         const senders = peerConnection.current.getSenders();
         senders.forEach((sender) => {
           if (sender.track && sender.track.kind === "video") {
-            sender.track.enabled = !newVideoOffState; // enabled = true when video is on
+            sender.track.enabled = !newVideoOffState;
           }
         });
       }
+    }
+  };
+
+  const startScreenShare = async () => {
+    if (isScreenSharing || !peerConnection.current) return;
+
+    try {
+      // Get screen sharing stream (video only for simplicity)
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+      });
+      screenStream.current = stream;
+
+      const screenTrack = stream.getVideoTracks()[0];
+      if (!screenTrack) {
+        showAlert("No video track found for screen sharing.", "error");
+        return;
+      }
+
+      // Find the video sender
+      const videoSender = peerConnection.current
+        .getSenders()
+        .find((sender) => sender.track?.kind === "video");
+
+      if (videoSender) {
+        await videoSender.replaceTrack(screenTrack);
+        setIsScreenSharing(true);
+        showAlert("Screen sharing started", "info");
+
+        // Update local video preview to show the screen
+        if (localVideoRef.current) {
+          const previewStream = new MediaStream([screenTrack]);
+          localVideoRef.current.srcObject = previewStream;
+        }
+
+        // When the user clicks the browser's "Stop sharing" button
+        screenTrack.onended = () => {
+          stopScreenShare();
+        };
+      } else {
+        console.error("No video sender found to replace track.");
+        showAlert("Could not start screen sharing.", "error");
+      }
+    } catch (err) {
+      console.error("Error starting screen share:", err);
+      showAlert("Failed to start screen sharing", "error");
+    }
+  };
+
+  const toggleScreenShare = () => {
+    if (isScreenSharing) {
+      stopScreenShare();
+    } else {
+      // If video is off, turn it on before sharing
+      if (isVideoOff) {
+        toggleVideo();
+      }
+      startScreenShare();
     }
   };
 
@@ -309,7 +444,7 @@ const RoomPage: React.FC = () => {
     const destination = audioContext.createMediaStreamDestination();
 
     // Add local audio tracks
-    if (localStream.current) {
+    if (localStream.current && localStream.current.getAudioTracks().length > 0) {
       const localAudioSource = audioContext.createMediaStreamSource(
         localStream.current
       );
@@ -317,14 +452,24 @@ const RoomPage: React.FC = () => {
     }
 
     // Add remote audio tracks
-    const remoteAudioSource = audioContext.createMediaStreamSource(
-      remoteStream.current
-    );
-    remoteAudioSource.connect(destination);
+    if (remoteStream.current.getAudioTracks().length > 0) {
+        const remoteAudioSource = audioContext.createMediaStreamSource(
+          remoteStream.current
+        );
+        remoteAudioSource.connect(destination);
+    }
+
 
     // Create a MediaRecorder to record the combined audio
     audioChunks.current = [];
-    mediaRecorder.current = new MediaRecorder(destination.stream);
+    try {
+      mediaRecorder.current = new MediaRecorder(destination.stream);
+    } catch(e) {
+      console.error("Error creating MediaRecorder:", e);
+      showAlert("Failed to start recording.", "error");
+      return;
+    }
+
 
     mediaRecorder.current.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -345,7 +490,8 @@ const RoomPage: React.FC = () => {
       // Clean up
       audioChunks.current = [];
       setIsRecording(false);
-      
+      audioContext.close(); // Close the audio context
+
       showAlert("Recording downloaded successfully", "success");
     };
 
@@ -377,7 +523,7 @@ const RoomPage: React.FC = () => {
       <header className="bg-gray-800 p-4 flex justify-between items-center">
         <div className="flex items-center space-x-2">
           <h1 className="text-white text-xl font-medium">
-            Teleconsultation Room
+            room {/* Changed from "Teleconsultation Room" */}
           </h1>
           <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">
             {roomName}
@@ -434,14 +580,16 @@ const RoomPage: React.FC = () => {
               muted
               className="w-full h-full object-cover scale-x-[-1]"
             />
-            {isVideoOff && (
+            {isVideoOff && !isScreenSharing && ( // Only show user icon if video is off AND not screen sharing
               <div className="absolute inset-0 flex items-center justify-center bg-gray-800 bg-opacity-80">
                 <User size={80} className="text-gray-400" />
               </div>
             )}
             <div className="absolute bottom-4 left-4 bg-gray-900 bg-opacity-70 px-3 py-1 rounded-lg text-white text-sm flex items-center">
-              <span>You</span>
-              {isAudioMuted && <MicOff size={16} className="ml-2 text-red-500" />}
+              <span>{isScreenSharing ? "Your Screen" : "You"}</span>
+              {isAudioMuted && (
+                <MicOff size={16} className="ml-2 text-red-500" />
+              )}
             </div>
           </div>
 
@@ -461,7 +609,9 @@ const RoomPage: React.FC = () => {
                 >
                   <User size={80} className="text-gray-400" />
                 </motion.div>
-                <p className="mt-4 text-gray-300">Waiting for participant to join...</p>
+                <p className="mt-4 text-gray-300">
+                  Waiting for participant to join...
+                </p>
               </div>
             )}
             <div className="absolute bottom-4 left-4 bg-gray-900 bg-opacity-70 px-3 py-1 rounded-lg text-white text-sm">
@@ -477,30 +627,65 @@ const RoomPage: React.FC = () => {
               whileTap={{ scale: 0.9 }}
               onClick={toggleAudio}
               className={`w-12 h-12 rounded-full flex items-center justify-center mx-2 ${
-                isAudioMuted ? "bg-red-600 hover:bg-red-700" : "bg-gray-700 hover:bg-gray-600"
+                isAudioMuted
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              {isAudioMuted ? <MicOff size={20} className="text-white" /> : <Mic size={20} className="text-white" />}
+              {isAudioMuted ? (
+                <MicOff size={20} className="text-white" />
+              ) : (
+                <Mic size={20} className="text-white" />
+              )}
             </motion.button>
 
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={toggleVideo}
               className={`w-12 h-12 rounded-full flex items-center justify-center mx-2 ${
-                isVideoOff ? "bg-red-600 hover:bg-red-700" : "bg-gray-700 hover:bg-gray-600"
+                isVideoOff && !isScreenSharing // Video is off AND not sharing
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              {isVideoOff ? <VideoOff size={20} className="text-white" /> : <Video size={20} className="text-white" />}
+              {isVideoOff && !isScreenSharing ? (
+                <VideoOff size={20} className="text-white" />
+              ) : (
+                <Video size={20} className="text-white" />
+              )}
+            </motion.button>
+
+            {/* Screen Share Button */}
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={toggleScreenShare}
+              className={`w-12 h-12 rounded-full flex items-center justify-center mx-2 ${
+                isScreenSharing
+                  ? "bg-blue-600 hover:bg-blue-700"
+                  : "bg-gray-700 hover:bg-gray-600"
+              }`}
+            >
+              {isScreenSharing ? (
+                <ScreenShareOff size={20} className="text-white" />
+              ) : (
+                <ScreenShare size={20} className="text-white" />
+              )}
             </motion.button>
 
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={toggleRecording}
               className={`w-12 h-12 rounded-full flex items-center justify-center mx-2 ${
-                isRecording ? "bg-red-600 hover:bg-red-700" : "bg-gray-700 hover:bg-gray-600"
+                isRecording
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-gray-700 hover:bg-gray-600"
               }`}
             >
-              {isRecording ? <StopCircle size={20} className="text-white" /> : <IoMdRecording size={20} className="text-white" />}
+              {isRecording ? (
+                <StopCircle size={20} className="text-white" />
+              ) : (
+                <IoMdRecording size={20} className="text-white" />
+              )}
             </motion.button>
 
             <motion.button
