@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Added for viewer navigation
 
 interface Stream {
   id: string;
@@ -20,11 +21,15 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [streamKey, setStreamKey] = useState("");
   const [showKeyModal, setShowKeyModal] = useState(false);
+  const [viewerStreamKey, setViewerStreamKey] = useState(""); // State for viewer input
+  const router = useRouter(); // Initialize router
 
   useEffect(() => {
     const fetchStreams = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/streams`);
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/api/streams`
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch streams");
         }
@@ -265,64 +270,47 @@ pause`;
     setShowKeyModal(true);
   };
 
+  /**
+   * Navigates to the stream page using the key from the input field
+   */
+  const handleWatchStream = () => {
+    if (viewerStreamKey.trim()) {
+      router.push(`/stream/${viewerStreamKey.trim()}`);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-900 text-gray-200">
-      <header className="bg-gray-800 border-b border-gray-700">
-        <div className="container mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold text-white">Live Streams</h1>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={downloadStreamingScript}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center space-x-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
-                  />
-                </svg>
-                <span>Start Streaming</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+    // Background is removed, now comes from layout.tsx
+    <div className="min-h-screen text-slate-200">
+      {/* Header section is removed, will be inherited from layout.tsx */}
 
       {showKeyModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4">
+          <div className="bg-slate-800 border border-slate-700/50 rounded-lg p-8 max-w-md w-full mx-4">
             <h2 className="text-2xl font-bold text-white mb-4">
               Stream Downloaded!
             </h2>
-            <div className="bg-gray-900 rounded p-4 mb-4">
-              <p className="text-gray-400 text-sm mb-2">Your Stream Key:</p>
+            <div className="bg-slate-900 rounded p-4 mb-4">
+              <p className="text-slate-400 text-sm mb-2">Your Stream Key:</p>
               <p className="text-xl font-mono text-blue-400">{streamKey}</p>
             </div>
-            <div className="space-y-2 text-gray-300 mb-6">
+            <div className="space-y-2 text-slate-300 mb-6">
               <p>✓ Streaming script downloaded</p>
               <p>✓ Run the .bat file to start streaming</p>
               <p>✓ Your stream will appear here automatically</p>
             </div>
             <div className="bg-yellow-900 bg-opacity-50 border border-yellow-700 rounded p-3 mb-4">
               <p className="text-yellow-300 text-sm">
-                <strong>Audio Setup:</strong> The &quot;With Audio&quot; option defaults
-                to <strong>&quot;Stereo Mix&quot;</strong> for system audio. To enable
-                Stereo Mix: Right-click sound icon → Sounds → Recording tab →
-                Right-click empty space → Show Disabled Devices → Enable Stereo
-                Mix.
+                <strong>Audio Setup:</strong> The &quot;With Audio&quot; option
+                defaults to <strong>&quot;Stereo Mix&quot;</strong> for system
+                audio. To enable Stereo Mix: Right-click sound icon → Sounds →
+                Recording tab → Right-click empty space → Show Disabled Devices
+                → Enable Stereo Mix.
               </p>
             </div>
             <button
               onClick={() => setShowKeyModal(false)}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+              className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded hover:opacity-90 transition"
             >
               Got it!
             </button>
@@ -331,6 +319,65 @@ pause`;
       )}
 
       <main className="container mx-auto px-4 py-8">
+        {/* --- NEW ACTION BAR --- */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 p-6 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl">
+          {/* Watch Stream Input */}
+          <div className="flex-1 w-full md:w-auto">
+            <label
+              htmlFor="streamKeyInput"
+              className="block text-sm font-medium text-slate-300 mb-2"
+            >
+              Have a Stream Key? Watch now.
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="streamKeyInput"
+                type="text"
+                value={viewerStreamKey}
+                onChange={(e) => setViewerStreamKey(e.target.value)}
+                placeholder="Enter stream key..."
+                className="flex-grow w-full px-4 py-2 bg-slate-800/50 border border-slate-600 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-white placeholder-slate-400 transition-all duration-300 backdrop-blur-sm"
+              />
+              <button
+                onClick={handleWatchStream}
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-semibold rounded-lg transition-all duration-300 shadow-lg hover:opacity-90 disabled:opacity-50"
+                disabled={!viewerStreamKey.trim()}
+              >
+                Watch
+              </button>
+            </div>
+          </div>
+
+          <div className="h-px md:h-16 w-full md:w-px bg-slate-700"></div>
+
+          {/* Start Streaming Button (Original Style) */}
+          <div className="flex flex-col items-center">
+            <p className="text-sm font-medium text-slate-300 mb-2">
+              Or go live yourself!
+            </p>
+            <button
+              onClick={downloadStreamingScript}
+              className="w-full md:w-auto px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded hover:opacity-90 transition flex items-center space-x-2"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                />
+              </svg>
+              <span>Start Streaming</span>
+            </button>
+          </div>
+        </div>
+        {/* --- END OF ACTION BAR --- */}
+
         {isLoading && (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -349,7 +396,7 @@ pause`;
         {!isLoading && !error && streams.length === 0 && (
           <div className="text-center py-16">
             <svg
-              className="mx-auto h-24 w-24 text-gray-600 mb-4"
+              className="mx-auto h-24 w-24 text-slate-600 mb-4" // Updated color
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -364,12 +411,13 @@ pause`;
             <h2 className="text-2xl font-semibold text-white mb-2">
               No Live Streams
             </h2>
-            <p className="text-gray-400 mb-8">
-              Be the first to start streaming!
+            <p className="text-slate-400 mb-8">
+              {" "}
+              {/* Updated color */}, Be the first to start streaming!
             </p>
             <button
               onClick={downloadStreamingScript}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition inline-flex items-center space-x-2"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-lg hover:opacity-90 transition inline-flex items-center space-x-2"
             >
               <svg
                 className="w-5 h-5"
@@ -395,9 +443,11 @@ pause`;
               <Link
                 key={stream.id}
                 href={`/stream/${stream.streamKey}`}
-                className="group block bg-gray-800 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition"
+                className="group block bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-lg overflow-hidden hover:ring-2 hover:ring-blue-500 transition" // Updated style
               >
-                <div className="relative aspect-video bg-gray-900">
+                <div className="relative aspect-video bg-slate-900">
+                  {" "}
+                  {/* Updated style */}
                   <img
                     src={`${process.env.NEXT_PUBLIC_MEDIA_URL}${stream.thumbnail}`}
                     alt={`Stream ${stream.streamKey}`}
@@ -405,16 +455,12 @@ pause`;
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = "none";
-                      // You could also set a placeholder image here
-                      // target.src = "/placeholder-image.png";
                     }}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-
                   <div className="absolute top-2 left-2 bg-red-600 px-2 py-1 rounded text-xs font-semibold text-white">
                     LIVE
                   </div>
-
                   <div className="absolute bottom-2 left-2 flex items-center text-white text-sm">
                     <svg
                       className="w-4 h-4 mr-1"
@@ -430,7 +476,6 @@ pause`;
                     </svg>
                     {stream.viewers} watching
                   </div>
-
                   <div className="absolute bottom-2 right-2 bg-black/70 px-2 py-1 rounded text-xs text-white">
                     {formatDuration(stream.duration)}
                   </div>
@@ -440,7 +485,9 @@ pause`;
                   <h3 className="text-lg font-semibold text-white group-hover:text-blue-400 transition">
                     {stream.streamKey}
                   </h3>
-                  <div className="mt-2 flex items-center justify-between text-sm text-gray-400">
+                  <div className="mt-2 flex items-center justify-between text-sm text-slate-400">
+                    {" "}
+                    {/* Updated color */}
                     <span>{Math.round(stream.bitrate / 1000)} kbps</span>
                     <span>{stream.fps} FPS</span>
                   </div>
@@ -450,7 +497,9 @@ pause`;
           </div>
         )}
 
-        <div className="mt-12 bg-gray-800 rounded-lg p-8">
+        <div className="mt-12 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-8">
+          {" "}
+          {/* Updated style */}
           <h2 className="text-2xl font-bold text-white mb-6">
             Quick Start Guide
           </h2>
@@ -459,12 +508,16 @@ pause`;
               <h3 className="text-lg font-semibold text-white mb-3">
                 Prerequisites
               </h3>
-              <div className="space-y-3 text-gray-300">
+              <div className="space-y-3 text-slate-300">
+                {" "}
+                {/* Updated color */}
                 <div className="flex items-start">
                   <span className="text-blue-500 font-bold mr-2">•</span>
                   <div>
                     <p className="font-semibold">FFmpeg Installation</p>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-slate-400">
+                      {" "}
+                      {/* Updated color */}
                       Download from ffmpeg.org and add to PATH
                     </p>
                   </div>
@@ -473,7 +526,9 @@ pause`;
                   <span className="text-blue-500 font-bold mr-2">•</span>
                   <div>
                     <p className="font-semibold">NMS Server</p>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-slate-400">
+                      {" "}
+                      {/* Updated color */}
                       Must be running on port 1935
                     </p>
                   </div>
@@ -482,8 +537,11 @@ pause`;
                   <span className="text-blue-500 font-bold mr-2">•</span>
                   <div>
                     <p className="font-semibold">Audio Setup (Optional)</p>
-                    <p className="text-sm text-gray-400">
-                      Enable &quot;Stereo Mix&quot; for system audio (now default)
+                    <p className="text-sm text-slate-400">
+                      {" "}
+                      {/* Updated color */}
+                      Enable &quot;Stereo Mix&quot; for system audio (now
+                      default)
                     </p>
                   </div>
                 </div>
@@ -494,7 +552,9 @@ pause`;
               <h3 className="text-lg font-semibold text-white mb-3">
                 How to Stream
               </h3>
-              <div className="space-y-3 text-gray-300">
+              <div className="space-y-3 text-slate-300">
+                {" "}
+                {/* Updated color */}
                 <div className="flex items-start">
                   <span className="text-green-500 font-bold mr-2">1.</span>
                   <p>Click &quot;Start Streaming&quot; to download the script</p>
@@ -517,21 +577,32 @@ pause`;
               </div>
             </div>
           </div>
-
-          <div className="mt-6 p-4 bg-gray-900 rounded">
-            <h4 className="text-sm font-semibold text-gray-400 mb-2">
+          <div className="mt-6 p-4 bg-slate-900 rounded">
+            {" "}
+            {/* Updated style */}
+            <h4 className="text-sm font-semibold text-slate-400 mb-2">
+              {" "}
+              {/* Updated color */}
               Server Configuration
             </h4>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="text-gray-500">RTMP URL:</span>
-                <span className="text-gray-300 ml-2">
+                <span className="text-slate-500">RTMP URL:</span>{" "}
+                {/* Updated color */}
+                <span className="text-slate-300 ml-2">
+                  {" "}
+                  {/* Updated color */}
                   {process.env.NEXT_PUBLIC_RTMP_URL}
                 </span>
               </div>
               <div>
-                <span className="text-gray-500">HLS Output:</span>
-                <span className="text-gray-300 ml-2">360p, 720p, 1080p</span>
+                <span className="text-slate-500">HLS Output:</span>{" "}
+                {/* Updated color */}
+                <span className="text-slate-300 ml-2">
+                  {" "}
+                  {/* Updated color */}
+                  360p, 720p, 1080p
+                </span>
               </div>
             </div>
           </div>
