@@ -13,7 +13,7 @@ import {
   remove,
   DatabaseReference,
 } from "firebase/database";
-import { realtimeDB } from "../../../../firebase/config";
+import { realtimeDB } from "../../../../../firebase/config";
 import { useSignal } from "@/contexts/SignalContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { 

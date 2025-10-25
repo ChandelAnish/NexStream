@@ -7,7 +7,6 @@ import {
   Users, 
   Phone, 
   Bell, 
-  Clock,
   User,
   Trophy,
   Star,
@@ -17,7 +16,7 @@ import {
   LogOut // 1. Imported LogOut icon
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../../firebase/config';
+import { auth } from '../../../../firebase/config';
 import { signOut } from 'firebase/auth';
 
 
