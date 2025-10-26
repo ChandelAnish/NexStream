@@ -5,11 +5,13 @@ const path = require('path');
 const fs = require('fs');
 const express = require('express');
 const cors = require('cors');
+const { Server } = require('socket.io'); // --- NEW: Import Socket.IO ---
+const http = require('http'); // --- NEW: Import http ---
 
 // Create media directories
 const mediaRoot = './media';
 const dirs = ['live', 'hls', 'dash', 'thumbnails'];
-dirs.forEach(dir => {
+dirs.forEach((dir) => {
   const dirPath = path.join(mediaRoot, dir);
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
@@ -26,22 +28,22 @@ const transcodingProfiles = [
     videoBitrate: '800k',
     audioBitrate: '96k',
     size: '640x360',
-    fps: 30
+    fps: 30,
   },
   {
     name: '720p',
     videoBitrate: '2500k',
     audioBitrate: '128k',
     size: '1280x720',
-    fps: 30
+    fps: 30,
   },
   {
     name: '1080p',
     videoBitrate: '5000k',
     audioBitrate: '192k',
     size: '1920x1080',
-    fps: 30
-  }
+    fps: 30,
+  },
 ];
 
 // NMS Configuration
@@ -51,13 +53,13 @@ const config = {
     chunk_size: 60000,
     gop_cache: true,
     ping: 30,
-    ping_timeout: 60
+    ping_timeout: 60,
   },
   http: {
     port: 8000,
     mediaroot: mediaRoot,
     allow_origin: '*',
-    api: true
+    api: true,
   },
   trans: {
     ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg',
@@ -69,69 +71,90 @@ const config = {
         hlsKeep: false,
         dash: true,
         dashFlags: '[f=dash:window_size=3:extra_window_size=5]',
-        dashKeep: false
-      }
-    ]
+        dashKeep: false,
+      },
+    ],
   },
   auth: {
     play: false,
     publish: false,
-    secret: 'your-secret-key-here'
-  }
+    secret: 'your-secret-key-here',
+  },
 };
 
 const nms = new NodeMediaServer(config);
 
 // Stream event handlers
 nms.on('preConnect', (id, args) => {
-  console.log('[NodeEvent on preConnect]', `id=${id} args=${JSON.stringify(args)}`);
+  console.log(
+    '[NodeEvent on preConnect]',
+    `id=${id} args=${JSON.stringify(args)}`
+  );
 });
 
 nms.on('postConnect', (id, args) => {
-  console.log('[NodeEvent on postConnect]', `id=${id} args=${JSON.stringify(args)}`);
+  console.log(
+    '[NodeEvent on postConnect]',
+    `id=${id} args=${JSON.stringify(args)}`
+  );
 });
 
 nms.on('doneConnect', (id, args) => {
-  console.log('[NodeEvent on doneConnect]', `id=${id} args=${JSON.stringify(args)}`);
+  console.log(
+    '[NodeEvent on doneConnect]',
+    `id=${id} args=${JSON.stringify(args)}`
+  );
 });
 
 nms.on('prePublish', (id, StreamPath, args) => {
-  console.log('[NodeEvent on prePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-  
+  console.log(
+    '[NodeEvent on prePublish]',
+    `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`
+  );
+
   // Extract stream key from path
   const streamKey = StreamPath.split('/').pop();
-  
+
   // Store stream info
   activeStreams.set(streamKey, {
     id,
     streamKey,
     streamPath: StreamPath,
     startTime: Date.now(),
-    viewers: 0
+    viewers: 0,
   });
-  
+
   // Start transcoding after a delay
   setTimeout(() => startTranscoding(streamKey), 3000);
 });
 
 nms.on('postPublish', (id, StreamPath, args) => {
-  console.log('[NodeEvent on postPublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+  console.log(
+    '[NodeEvent on postPublish]',
+    `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`
+  );
 });
 
 nms.on('donePublish', (id, StreamPath, args) => {
-  console.log('[NodeEvent on donePublish]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-  
+  console.log(
+    '[NodeEvent on donePublish]',
+    `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`
+  );
+
   // Clean up stream info
   const streamKey = StreamPath.split('/').pop();
   activeStreams.delete(streamKey);
-  
+
   // Stop transcoding
   stopTranscoding(streamKey);
 });
 
 nms.on('prePlay', (id, StreamPath, args) => {
-  console.log('[NodeEvent on prePlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-  
+  console.log(
+    '[NodeEvent on prePlay]',
+    `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`
+  );
+
   // Update viewer count
   const streamKey = StreamPath.split('/').pop();
   const stream = activeStreams.get(streamKey);
@@ -141,12 +164,18 @@ nms.on('prePlay', (id, StreamPath, args) => {
 });
 
 nms.on('postPlay', (id, StreamPath, args) => {
-  console.log('[NodeEvent on postPlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
+  console.log(
+    '[NodeEvent on postPlay]',
+    `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`
+  );
 });
 
 nms.on('donePlay', (id, StreamPath, args) => {
-  console.log('[NodeEvent on donePlay]', `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`);
-  
+  console.log(
+    '[NodeEvent on donePlay]',
+    `id=${id} StreamPath=${StreamPath} args=${JSON.stringify(args)}`
+  );
+
   // Update viewer count
   const streamKey = StreamPath.split('/').pop();
   const stream = activeStreams.get(streamKey);
@@ -160,54 +189,72 @@ const activeTranscodings = new Map();
 
 function startTranscoding(streamKey) {
   console.log(`Starting transcoding for stream: ${streamKey}`);
-  
+
   const inputPath = `rtmp://localhost:1935/live/${streamKey}`;
   const processes = [];
-  
+
   // Create HLS directory for this stream
   const hlsDir = path.join(mediaRoot, 'hls', streamKey);
   if (!fs.existsSync(hlsDir)) {
     fs.mkdirSync(hlsDir, { recursive: true });
   }
-  
+
   // Create master playlist
   const masterPlaylist = createMasterPlaylist(streamKey, transcodingProfiles);
   fs.writeFileSync(path.join(hlsDir, 'master.m3u8'), masterPlaylist);
-  
+
   // Start transcoding for each profile
-  transcodingProfiles.forEach(profile => {
+  transcodingProfiles.forEach((profile) => {
     const outputDir = path.join(hlsDir, profile.name);
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
-    
+
     const command = ffmpeg(inputPath)
-      .inputOptions([
-        '-analyzeduration', '1000000',
-        '-probesize', '1000000'
-      ])
+      .inputOptions(['-analyzeduration', '1000000', '-probesize', '1000000'])
       .outputOptions([
-        '-c:v', 'libx264',
-        '-preset', 'veryfast',
-        '-tune', 'zerolatency',
-        '-c:a', 'aac',
-        '-ar', '44100',
-        '-ac', '2',
-        '-f', 'hls',
-        '-hls_time', '2',
-        '-hls_list_size', '5',
-        '-hls_flags', 'delete_segments',
-        '-hls_segment_filename', path.join(outputDir, 'segment_%03d.ts'),
-        '-master_pl_name', 'master.m3u8',
-        '-g', '48',
-        '-keyint_min', '48',
-        '-sc_threshold', '0',
-        '-b:v', profile.videoBitrate,
-        '-maxrate', profile.videoBitrate,
-        '-bufsize', parseInt(profile.videoBitrate) * 2 + 'k',
-        '-b:a', profile.audioBitrate,
-        '-s', profile.size,
-        '-r', profile.fps
+        '-c:v',
+        'libx264',
+        '-preset',
+        'veryfast',
+        '-tune',
+        'zerolatency',
+        '-c:a',
+        'aac',
+        '-ar',
+        '44100',
+        '-ac',
+        '2',
+        '-f',
+        'hls',
+        '-hls_time',
+        '2',
+        '-hls_list_size',
+        '5',
+        '-hls_flags',
+        'delete_segments',
+        '-hls_segment_filename',
+        path.join(outputDir, 'segment_%03d.ts'),
+        '-master_pl_name',
+        'master.m3u8',
+        '-g',
+        '48',
+        '-keyint_min',
+        '48',
+        '-sc_threshold',
+        '0',
+        '-b:v',
+        profile.videoBitrate,
+        '-maxrate',
+        profile.videoBitrate,
+        '-bufsize',
+        parseInt(profile.videoBitrate) * 2 + 'k',
+        '-b:a',
+        profile.audioBitrate,
+        '-s',
+        profile.size,
+        '-r',
+        profile.fps,
       ])
       .output(path.join(outputDir, 'index.m3u8'))
       .on('start', (commandLine) => {
@@ -219,20 +266,15 @@ function startTranscoding(streamKey) {
       .on('end', () => {
         console.log(`Transcoding finished for ${profile.name}`);
       });
-    
+
     command.run();
     processes.push(command);
   });
-  
+
   // Generate thumbnail
   const thumbnailPath = path.join(mediaRoot, 'thumbnails', `${streamKey}.jpg`);
   const thumbnailCommand = ffmpeg(inputPath)
-    .outputOptions([
-      '-vframes', '1',
-      '-an',
-      '-s', '320x180',
-      '-ss', '1'
-    ])
+    .outputOptions(['-vframes', '1', '-an', '-s', '320x180', '-ss', '1'])
     .output(thumbnailPath)
     .on('end', () => {
       console.log(`Thumbnail generated for ${streamKey}`);
@@ -240,19 +282,19 @@ function startTranscoding(streamKey) {
     .on('error', (err) => {
       console.error('Thumbnail generation error:', err.message);
     });
-  
+
   thumbnailCommand.run();
   processes.push(thumbnailCommand);
-  
+
   activeTranscodings.set(streamKey, processes);
 }
 
 function stopTranscoding(streamKey) {
   console.log(`Stopping transcoding for stream: ${streamKey}`);
-  
+
   const processes = activeTranscodings.get(streamKey);
   if (processes) {
-    processes.forEach(command => {
+    processes.forEach((command) => {
       try {
         command.kill('SIGKILL');
       } catch (err) {
@@ -261,7 +303,7 @@ function stopTranscoding(streamKey) {
     });
     activeTranscodings.delete(streamKey);
   }
-  
+
   // Clean up HLS files after a delay
   setTimeout(() => {
     const hlsDir = path.join(mediaRoot, 'hls', streamKey);
@@ -274,14 +316,16 @@ function stopTranscoding(streamKey) {
 
 function createMasterPlaylist(streamKey, profiles) {
   let playlist = '#EXTM3U\n#EXT-X-VERSION:3\n';
-  
-  profiles.forEach(profile => {
-    const bandwidth = parseInt(profile.videoBitrate) * 1000 + parseInt(profile.audioBitrate) * 1000;
+
+  profiles.forEach((profile) => {
+    const bandwidth =
+      parseInt(profile.videoBitrate) * 1000 +
+      parseInt(profile.audioBitrate) * 1000;
     const resolution = profile.size;
     playlist += `#EXT-X-STREAM-INF:BANDWIDTH=${bandwidth},RESOLUTION=${resolution}\n`;
     playlist += `${profile.name}/index.m3u8\n`;
   });
-  
+
   return playlist;
 }
 
@@ -293,7 +337,7 @@ app.use(express.json());
 // Get all active streams
 app.get('/api/streams', (req, res) => {
   const streams = [];
-  
+
   // Use our activeStreams Map instead of trying to access NMS internals
   for (const [streamKey, streamInfo] of activeStreams) {
     streams.push({
@@ -305,10 +349,10 @@ app.get('/api/streams', (req, res) => {
       bitrate: 4000, // Default values since we're not tracking these yet
       fps: 30,
       thumbnail: `/thumbnails/${streamKey}.jpg`,
-      hlsUrl: `/hls/${streamKey}/master.m3u8`
+      hlsUrl: `/hls/${streamKey}/master.m3u8`,
     });
   }
-  
+
   res.json({ streams });
 });
 
@@ -316,14 +360,17 @@ app.get('/api/streams', (req, res) => {
 app.get('/api/streams/:streamKey', (req, res) => {
   const { streamKey } = req.params;
   console.log(`Looking for stream: ${streamKey}`);
-  
+
   const streamInfo = activeStreams.get(streamKey);
-  
+
   if (!streamInfo) {
-    console.log(`Stream ${streamKey} not found. Active streams:`, Array.from(activeStreams.keys()));
+    console.log(
+      `Stream ${streamKey} not found. Active streams:`,
+      Array.from(activeStreams.keys())
+    );
     return res.status(404).json({ error: 'Stream not found' });
   }
-  
+
   res.json({
     id: streamInfo.id,
     streamKey: streamInfo.streamKey,
@@ -334,19 +381,19 @@ app.get('/api/streams/:streamKey', (req, res) => {
     fps: 30,
     thumbnail: `/thumbnails/${streamKey}.jpg`,
     hlsUrl: `/hls/${streamKey}/master.m3u8`,
-    resolutions: transcodingProfiles.map(p => ({
+    resolutions: transcodingProfiles.map((p) => ({
       name: p.name,
-      url: `/hls/${streamKey}/${p.name}/index.m3u8`
-    }))
+      url: `/hls/${streamKey}/${p.name}/index.m3u8`,
+    })),
   });
 });
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     status: 'ok',
     activeStreams: activeStreams.size,
-    streams: Array.from(activeStreams.keys())
+    streams: Array.from(activeStreams.keys()),
   });
 });
 
@@ -356,12 +403,51 @@ app.use('/thumbnails', express.static(path.join(mediaRoot, 'thumbnails')));
 
 const API_PORT = process.env.API_PORT || 3001;
 
+// --- NEW: Setup HTTP Server and Socket.IO ---
+const httpServer = http.createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: '*', // Allow all origins for simplicity. For production, restrict this.
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Socket.IO connection handling
+io.on('connection', (socket) => {
+  console.log(`[Socket.IO] User connected: ${socket.id}`);
+
+  // Join a room based on streamKey
+  socket.on('join_room', (streamKey) => {
+    socket.join(streamKey);
+    console.log(`[Socket.IO] ${socket.id} joined room: ${streamKey}`);
+  });
+
+  // Leave a room
+  socket.on('leave_room', (streamKey) => {
+    socket.leave(streamKey);
+    console.log(`[Socket.IO] ${socket.id} left room: ${streamKey}`);
+  });
+
+  // Handle incoming messages
+  socket.on('send_message', ({ streamKey, message }) => {
+    // Broadcast the message to everyone in the specified room
+    io.to(streamKey).emit('receive_message', message);
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log(`[Socket.IO] User disconnected: ${socket.id}`);
+  });
+});
+// --- END NEW ---
+
 // Start servers
 nms.run();
 console.log('Node Media Server started on port 1935');
 console.log('HTTP-FLV/HLS/DASH server started on port 8000');
 
-app.listen(API_PORT, () => {
-  console.log(`API server running on port ${API_PORT}`);
+// --- UPDATED: Start the HTTP server (which includes Express and Socket.IO) ---
+httpServer.listen(API_PORT, () => {
+  console.log(`API and Chat server running on port ${API_PORT}`);
   console.log('Use /api/health to check server status');
 });
