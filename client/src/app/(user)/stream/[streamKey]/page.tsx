@@ -314,7 +314,7 @@ export default function StreamPage() {
               )}
             </div>
 
-            <div className="mt-3 bg-gray-800 rounded-lg p-6">
+            <div className="mt-3 bg-gray-800 rounded-lg p-5">
               <h1 className="text-2xl font-bold text-white mb-4">
                 Stream: {streamKey}
               </h1>
@@ -328,7 +328,7 @@ export default function StreamPage() {
 
           {/* --- UPDATED CHAT UI --- */}
           <div className="xl:col-span-1">
-            <div className="bg-gray-800 rounded-lg flex flex-col md:min-h-[500px] min-h-[600px] md:max-h-[500px] max-h-[600px] xl:h-full">
+            <div className="bg-gray-800 rounded-lg flex flex-col min-h-[500px] md:min-h-[600px] max-h-[500px] md:max-h-[600px] xl:h-full">
               <h2 className="text-xl font-bold text-white p-4 border-b border-gray-700">
                 Stream Chat
               </h2>
