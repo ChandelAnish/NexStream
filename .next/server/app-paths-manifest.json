@@ -1,0 +1,4 @@
+{
+  "/dashboard/page": "app/dashboard/page.js",
+  "/videoCalling/page": "app/videoCalling/page.js"
+}

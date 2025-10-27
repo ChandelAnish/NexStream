@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "agora-rtm-sdk": "^2.2.2",
+    "agora-token": "^2.0.5"
+  }
+}
