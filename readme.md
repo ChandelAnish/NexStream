@@ -5,7 +5,9 @@
 ![NexStream Logo](https://img.shields.io/badge/NexStream-Live-blue?style=for-the-badge&logo=video&logoColor=white)
 ![Next.js](https://img.shields.io/badge/Next.js-15-black?style=for-the-badge&logo=next.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
-![Framer Motion](https://img.shields.io/badge/Framer_Motion-black?style=for-the-badge&logo=framer&logoColor=white)
+![Node Media Server](https://img.shields.io/badge/NMS-Streaming-red?style=for-the-badge&logo=node.js&logoColor=white)
+
+A full-stack live streaming platform with HLS support, multi-resolution transcoding, and real-time video calling capabilities.
 
 ## 🚀 Features
 
@@ -30,19 +32,37 @@
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: Next.js 15, React 18, TypeScript
+### Frontend (Client)
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
 - **Styling**: Tailwind CSS
+- **UI Components**: Material-UI, Shadcn UI, Lucide React Icons
+- **State Management**: Redux Toolkit, React Context
+- **Video Player**: HLS.js for live streaming
+- **Video Calling**: WebRTC with PeerJS/Socket.IO
 - **Animations**: Framer Motion
-- **UI Components**: Material-UI, Lucide React Icons
-- **State Management**: Redux Toolkit
-- **Authentication**: Custom Auth Context
+
+### Backend (Media Server)
+- **Runtime**: Node.js
+- **Streaming**: Node Media Server (NMS)
+- **Transcoding**: FFmpeg (fluent-ffmpeg)
+- **Protocol**: RTMP ingest → HLS output
+- **Web Server**: Express.js
+- **Real-time**: Socket.IO for chat and signaling
+
+### Database
+- **ORM**: Prisma
+- **Database**: PostgreSQL
 
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
-- Node.js (v18 or higher)
-- npm, yarn, or pnpm
-- Git
+- **Node.js** (v18 or higher)
+- **npm** or **yarn**
+- **Git**
+- **FFmpeg** (for local streaming) - Download from [ffmpeg.org](https://ffmpeg.org/download.html) and add to PATH
+- **PostgreSQL** (for database)
+- **Media Server** (Node Media Server - included in project)
 
 ## 🚀 Quick Start
 
@@ -52,64 +72,106 @@ Before you begin, ensure you have the following installed:
    cd nexstream
    ```
 
-2. **Install dependencies**
+2. **Install Client dependencies**
    ```bash
+   cd client
    npm install
    # or
    yarn install
-   # or
-   pnpm install
    ```
 
-3. **Set up environment variables**
+3. **Install Media Server dependencies**
    ```bash
-   cp .env.example .env.local
+   cd ../media_server
+   npm install
    ```
-   
-   Edit `.env.local` with your configuration:
+
+4. **Set up environment variables**
+
+   Create `client/.env.local`:
    ```env
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   NEXT_PUBLIC_API_URL=your-api-url
-   DATABASE_URL=your-database-url
-   NEXTAUTH_SECRET=your-auth-secret
+   # API and Media Server URLs
+   NEXT_PUBLIC_API_URL=http://localhost:3001
+   NEXT_PUBLIC_MEDIA_URL=http://localhost:8000
+   NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+   NEXT_PUBLIC_RTMP_URL=rtmp://localhost:1935/live
+   
+   # Database
+   DATABASE_URL=postgresql://user:password@localhost:5432/nexstream
+   
+   # Firebase (for authentication)
+   NEXT_PUBLIC_FIREBASE_API_KEY=your-firebase-api-key
+   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+   NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+   NEXT_PUBLIC_FIREBASE_APP_ID=your-app-id
    ```
 
-4. **Run the development server**
+5. **Set up database**
    ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
+   cd ../client
+   npx prisma generate
+   npx prisma migrate dev
    ```
 
-5. **Open your browser**
+6. **Start the Media Server**
+   ```bash
+   cd ../media_server
+   npm start
+   ```
+   The media server will run on:
+   - RTMP: `rtmp://localhost:1935`
+   - HTTP API: `http://localhost:3001`
+   - HLS/DASH: `http://localhost:8000`
+
+7. **Start the Next.js client**
+   ```bash
+   cd ../client
+   npm run dev
+   ```
+
+8. **Open your browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ## 📁 Project Structure
 
 ```
 nexstream/
-├── components/           # Reusable UI components
-│   ├── ui/              # Base UI components
-│   ├── auth/            # Authentication components
-│   └── streaming/       # Streaming-related components
-├── contexts/            # React contexts
-│   └── AuthContext.tsx  # Authentication context
-├── pages/               # Next.js pages (if using pages router)
-│   ├── api/            # API routes
-│   ├── sign-in.tsx     # Sign in page
-│   └── sign-up.tsx     # Sign up page
-├── app/                 # Next.js app router (if using app router)
-│   ├── layout.tsx      # Root layout
-│   ├── page.tsx        # Landing page
-│   ├── sign-in/        # Sign in route
-│   └── sign-up/        # Sign up route
-├── styles/             # Global styles
-│   └── globals.css     # Tailwind CSS imports
-├── lib/                # Utility functions and configurations
-├── types/              # TypeScript type definitions
-└── public/             # Static assets
+├── client/                        # Next.js 15 Frontend
+│   ├── src/
+│   │   ├── app/                   # App Router
+│   │   │   ├── (auth)/           # Auth routes
+│   │   │   │   ├── sign-in/
+│   │   │   │   ├── sign-up/
+│   │   │   │   └── forgot-password/
+│   │   │   ├── (user)/           # Protected routes
+│   │   │   │   ├── dashboard/
+│   │   │   │   ├── stream/
+│   │   │   │   │   ├── [streamKey]/
+│   │   │   │   │   └── page.tsx
+│   │   │   │   └── videoCalling/
+│   │   │   │       ├── [roomName]/
+│   │   │   │       └── page.tsx
+│   │   │   ├── api/              # API routes
+│   │   │   └── page.tsx          # Landing page
+│   │   ├── components/           # React components
+│   │   ├── contexts/             # Auth & Signal contexts
+│   │   ├── lib/                  # Utils & Prisma
+│   │   └── store/                # Redux store
+│   ├── prisma/
+│   │   └── schema.prisma
+│   └── package.json
+│
+├── media_server/                 # Node Media Server
+│   ├── nms-server.js            # RTMP → HLS conversion
+│   ├── media/                   # Generated media files
+│   │   ├── hls/                 # HLS chunks (.ts + .m3u8)
+│   │   ├── thumbnails/          # Stream thumbnails
+│   │   └── ...
+│   └── package.json
+│
+└── readme.md
 ```
 
 ## 🎨 Design System
@@ -137,52 +199,115 @@ background: linear-gradient(135deg, from-gray-900 via-gray-800 to-black)
 
 ## 🔧 Available Scripts
 
+### Client (Next.js)
 ```bash
-# Development
-npm run dev          # Start development server
+cd client
+
+npm run dev          # Start dev server (localhost:3000)
 npm run build        # Build for production
 npm run start        # Start production server
 npm run lint         # Run ESLint
-npm run type-check   # Run TypeScript checks
+```
 
-# Testing (if implemented)
-npm run test         # Run tests
-npm run test:watch   # Run tests in watch mode
-npm run test:coverage # Generate coverage report
+### Media Server
+```bash
+cd media_server
+
+npm start            # Start media server
+npm run dev          # Start with nodemon
 ```
 
 ## 🌐 Deployment
 
-### Vercel (Recommended)
+### Frontend (Client)
+**Vercel (Recommended)**
 1. Push your code to GitHub
 2. Connect your repository to [Vercel](https://vercel.com)
-3. Configure environment variables
+3. Configure environment variables in Vercel dashboard
 4. Deploy automatically on every push
 
-### Other Platforms
-- **Netlify**: `npm run build && npm run export`
-- **Docker**: Use the included Dockerfile
-- **Traditional Hosting**: Build and upload the `out/` directory
+### Backend (Media Server)
+The media server needs to be deployed separately as it requires persistent connection for RTMP streams.
+
+**Options:**
+- **VPS**: DigitalOcean, Linode, AWS EC2
+- **Docker**: Use provided Docker configuration
+- **Cloud Run**: Google Cloud Run for serverless (requires configuration)
+
+**Environment Setup on Server:**
+```bash
+# Install FFmpeg
+apt-get install ffmpeg
+
+# Install Node.js dependencies
+npm install
+
+# Start media server
+npm start
+```
 
 ## 📱 Routes
 
+### Public Routes
 | Route | Description |
 |-------|-------------|
-| `/` | Landing page |
+| `/` | Landing page with live streams |
 | `/sign-in` | User authentication |
 | `/sign-up` | User registration |
+
+### Protected User Routes (`(user)` group)
+| Route | Description |
+|-------|-------------|
 | `/dashboard` | User dashboard (authenticated) |
-| `/stream` | Streaming interface |
-| `/meetings` | Video conferencing |
-| `/settings` | User settings |
+| `/stream` | Browse and manage streams |
+| `/stream/[streamKey]` | Watch live stream |
+| `/videoCalling` | Video calling interface |
+| `/videoCalling/[roomName]` | Join video call room |
 
 ## 🔐 Authentication
 
-The app uses a custom authentication context with the following features:
-- JWT-based authentication
-- Persistent sessions
-- Protected routes
-- Social login integration (Google, etc.)
+The app uses Firebase Authentication with React Context:
+- **Firebase Auth** - Email/password and social login
+- **AuthContext** - Global authentication state
+- **Middleware** - Route protection
+- **Protected Routes** - User-specific content
+- **Session Management** - Persistent login state
+
+## 🎥 Streaming Architecture
+
+### How it Works
+
+1. **Streamer** (Local PC)
+   - Downloads streaming script from the website
+   - Script uses FFmpeg to capture screen/audio
+   - Sends RTMP stream to media server
+
+2. **Media Server** (Node Media Server)
+   - Receives RTMP stream on port 1935
+   - Transcodes into multiple resolutions (360p, 720p, 1080p)
+   - Generates HLS chunks (.ts files) and playlists (.m3u8)
+   - Provides API for stream metadata
+
+3. **Viewers** (Browser)
+   - Browse live streams via HLS.js player
+   - Adaptive bitrate streaming
+   - Real-time stream updates
+
+### Streaming Flow
+
+```
+Streamer (FFmpeg) 
+  → RTMP (rtmp://localhost:1935/live/{streamKey})
+  → Media Server (transcodes to HLS)
+  → Viewers (http://localhost:8000/hls/{streamKey}/master.m3u8)
+```
+
+### Available Scripts (Media Server)
+
+```bash
+npm start       # Start media server
+npm run dev     # Start with nodemon (auto-reload)
+```
 
 ## 🎬 Animations
 
@@ -256,7 +381,26 @@ npm run lint
 ```
 
 **3. Environment Variables**
-Make sure all required environment variables are set in `.env.local`
+Make sure all required environment variables are set in `client/.env.local`:
+
+```env
+# Required for Client
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_MEDIA_URL=http://localhost:8000
+NEXT_PUBLIC_SERVER_URL=http://localhost:3000
+NEXT_PUBLIC_RTMP_URL=rtmp://localhost:1935/live
+DATABASE_URL=postgresql://...
+```
+
+**4. FFmpeg Not Found**
+```bash
+# Windows
+# Download from https://ffmpeg.org/download.html
+# Add FFmpeg to system PATH
+
+# Verify installation
+ffmpeg -version
+```
 
 ## 📞 Support
 
@@ -272,10 +416,15 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - [Next.js](https://nextjs.org/) - The React framework
+- [Node Media Server](https://github.com/illuspas/Node-Media-Server) - Media streaming server
+- [FFmpeg](https://ffmpeg.org/) - Multimedia framework
+- [HLS.js](https://github.com/video-dev/hls.js/) - HTTP Live Streaming
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
 - [Framer Motion](https://www.framer.com/motion/) - Animation library
-- [Lucide React](https://lucide.dev/) - Icon library
-- [Vercel](https://vercel.com/) - Deployment platform
+- [Firebase](https://firebase.google.com/) - Authentication and backend
+- [Prisma](https://www.prisma.io/) - Next-generation ORM
+- [Socket.IO](https://socket.io/) - Real-time communication
+- [Redux Toolkit](https://redux-toolkit.js.org/) - State management
 
 ---
 
