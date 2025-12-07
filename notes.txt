@@ -2151,3 +2151,159 @@ Set server URL to my LAN still why localhost works ?
 
                         - That’s why LAN access only works when using the local network IP, not localhost.
 ------------
+
+
+
+
+
+------------
+Windows batch files syntax :
+
+1) Declare / set / update variables
+
+        -> Set a variable
+
+                set NAME=Anish
+                - This stores the string Anish in NAME.
+
+        -> Read a variable
+
+                echo %NAME%
+                - %NAME% is replaced before the line runs (normal expansion).
+
+        -> Update a variable (string)
+
+                set NAME=Bob
+
+        -> Update a variable (arithmetic)
+
+                set /a COUNT=COUNT+1
+                set /a COUNT+=1
+
+                - set /a treats values as numbers.
+
+2) %var% vs !var! (when to use each)
+
+        - %var% — normal expansion. The variable is substituted when the command line is parsed (before execution).
+        - Works fine outside loops/blocks.
+
+        - !var! — delayed expansion. Use this when setlocal enabledelayedexpansion is active and you need the current value inside loops or if blocks.
+
+        - Example difference
+
+                setlocal enabledelayedexpansion
+                set count=0
+                for %%x in (a b c) do (
+                        set /a count+=1
+                        echo %count%   :: prints the same old value each iteration (bad)
+                        echo !count!   :: prints 1, then 2, then 3 (good)
+                )
+
+3) What is %%i?
+
+        for loop variable.
+
+        - Inside a batch file, you write %%i, %%a, %%x, etc.
+        - At the command prompt (interactive), you use a single % (e.g., %i).
+        - Batch files require %% because % is used for variables inside the script.
+        - CMD (the black window) treats %i as the loop variable directly.
+                - .bat file → use %%i
+                - CMD window → use %i
+
+        Example
+
+                for %%i in (1 2 3) do echo %%i
+
+
+                This prints:
+
+                        1
+                        2
+                        3
+
+4) for loop syntax (common forms)
+
+-> Simple list
+        for %%i in (apple banana cherry) do (
+          echo %%i
+        )
+
+-> Numeric range (using for /l)
+        for /l %%n in (1,1,5) do (
+          echo %%n
+        )
+
+        - (start,step,end) — prints 1 2 3 4 5.
+
+-> Read lines or tokens (for /f)
+
+        - Useful to parse files or command output.
+
+                1) Reading file :
+
+                        for /f "tokens=1,2 delims=," %%a in (data.csv) do (
+                        echo First=%%a  Second=%%b
+                        )
+                        
+                        - for /f reads text, one line at a time, and splits each line into “words” using delimiters.
+                        - i.e “Read a line → break it into pieces → store each piece in variables like %%a, %%b, %%c → use them.”
+
+                        Imagine your data.csv file contains:
+
+                                Anish,23,India
+                                Rahul,30,UK
+
+                        Now, what will for /f do?
+
+                                Step 1) Read the first line: Anish,23,India
+                                Step 2) Split using the delimiter ,
+                                        That means:
+
+                                                piece 1 → Anish
+                                                piece 2 → 23
+                                                piece 3 → India (ignored because we only asked for tokens=1,2)
+
+                                Step 3) Assign:
+
+                                        %%a = Anish
+                                        %%b = 23
+
+                                Step 4) Inside the loop, this runs:
+                                        echo First=%%a  Second=%%b
+
+                                        So output becomes:
+                                                First=Anish  Second=23
+
+                2) Reading output of a command:
+
+                        for /f "usebackq tokens=1-5 delims=," %%a in (`powershell -command "..."`) do (
+                        rem %%a .. %%e hold tokens
+                        )
+
+                        - Instead of reading a file, you can read output of a command.
+
+                        Example:
+
+                                for /f "tokens=1,2" %%a in (`echo hello,world`) do (
+                                echo %%a %%b
+                                )
+
+                        What happens?
+
+                                - Command runs: echo hello,world
+                                - The output is: hello,world
+
+
+                                - Then:
+                                        Split on comma:
+
+                                                token 1 = hello
+                                                token 2 = world
+
+                                - Assigned as:
+
+                                        %%a = hello
+                                        %%b = world
+
+                                - Then inside block: echo hello world
+------------
