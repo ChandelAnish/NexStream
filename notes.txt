@@ -2306,4 +2306,16 @@ Windows batch files syntax :
                                         %%b = world
 
                                 - Then inside block: echo hello world
+
+        - In a for /f loop:
+
+                - The first variable name you write (%%a) automatically creates the next variables alphabetically:
+
+                        %%a → first token
+                        %%b → second token
+                        %%c → third token
+                        and so on...
+ 
+                - You do NOT need to declare %%b, %%c, etc.
+                - They are automatically created when you ask for more tokens.
 ------------
