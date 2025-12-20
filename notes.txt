@@ -2120,7 +2120,7 @@ Set server URL to my LAN still why localhost works ?
 
 
 
-        ***8localhost and 192.168.29.11 both point to the same machine then why on using NEXT_PUBLIC_SERVER_URL=http://localhost:3000 it was not ccessible to other devices on same Wi-Fi
+        ***localhost and 192.168.29.11 both point to the same machine then why on using NEXT_PUBLIC_SERVER_URL=http://localhost:3000 it was not accessible to other devices on same Wi-Fi
 
 
                 🧩 Key idea
@@ -2159,163 +2159,550 @@ Set server URL to my LAN still why localhost works ?
 ------------
 Windows batch files syntax :
 
-1) Declare / set / update variables
+        1) Declare / set / update variables
 
-        -> Set a variable
+                -> Set a variable
 
-                set NAME=Anish
-                - This stores the string Anish in NAME.
+                        set NAME=Anish
+                        - This stores the string Anish in NAME.
 
-        -> Read a variable
+                -> Read a variable
 
-                echo %NAME%
-                - %NAME% is replaced before the line runs (normal expansion).
+                        echo %NAME%
+                        - %NAME% is replaced before the line runs (normal expansion).
 
-        -> Update a variable (string)
+                -> Update a variable (string)
 
-                set NAME=Bob
+                        set NAME=Bob
 
-        -> Update a variable (arithmetic)
+                -> Update a variable (arithmetic)
 
-                set /a COUNT=COUNT+1
-                set /a COUNT+=1
+                        set /a COUNT=COUNT+1
+                        set /a COUNT+=1
 
-                - set /a treats values as numbers.
+                        - set /a treats values as numbers.
 
-2) %var% vs !var! (when to use each)
+        2) %var% vs !var! (when to use each)
 
-        - %var% — normal expansion. The variable is substituted when the command line is parsed (before execution).
-        - Works fine outside loops/blocks.
+                - %var% — normal expansion. The variable is substituted when the command line is parsed (before execution).
+                - Works fine outside loops/blocks.
 
-        - !var! — delayed expansion. Use this when setlocal enabledelayedexpansion is active and you need the current value inside loops or if blocks.
+                - !var! — delayed expansion. Use this when setlocal enabledelayedexpansion is active and you need the current value inside loops or if blocks, here the expansion is done later not during parsing.
 
-        - Example difference
+                - Example difference
 
-                setlocal enabledelayedexpansion
-                set count=0
-                for %%x in (a b c) do (
-                        set /a count+=1
-                        echo %count%   :: prints the same old value each iteration (bad)
-                        echo !count!   :: prints 1, then 2, then 3 (good)
-                )
-
-3) What is %%i?
-
-        for loop variable.
-
-        - Inside a batch file, you write %%i, %%a, %%x, etc.
-        - At the command prompt (interactive), you use a single % (e.g., %i).
-        - Batch files require %% because % is used for variables inside the script.
-        - CMD (the black window) treats %i as the loop variable directly.
-                - .bat file → use %%i
-                - CMD window → use %i
-
-        Example
-
-                for %%i in (1 2 3) do echo %%i
-
-
-                This prints:
-
-                        1
-                        2
-                        3
-
-4) for loop syntax (common forms)
-
--> Simple list
-        for %%i in (apple banana cherry) do (
-          echo %%i
-        )
-
--> Numeric range (using for /l)
-        for /l %%n in (1,1,5) do (
-          echo %%n
-        )
-
-        - (start,step,end) — prints 1 2 3 4 5.
-
--> Read lines or tokens (for /f)
-
-        - Useful to parse files or command output.
-
-                1) Reading file :
-
-                        for /f "tokens=1,2 delims=," %%a in (data.csv) do (
-                        echo First=%%a  Second=%%b
-                        )
-                        
-                        - for /f reads text, one line at a time, and splits each line into “words” using delimiters.
-                        - i.e “Read a line → break it into pieces → store each piece in variables like %%a, %%b, %%c → use them.”
-
-                        Imagine your data.csv file contains:
-
-                                Anish,23,India
-                                Rahul,30,UK
-
-                        Now, what will for /f do?
-
-                                Step 1) Read the first line: Anish,23,India
-                                Step 2) Split using the delimiter ,
-                                        That means:
-
-                                                piece 1 → Anish
-                                                piece 2 → 23
-                                                piece 3 → India (ignored because we only asked for tokens=1,2)
-
-                                Step 3) Assign:
-
-                                        %%a = Anish
-                                        %%b = 23
-
-                                Step 4) Inside the loop, this runs:
-                                        echo First=%%a  Second=%%b
-
-                                        So output becomes:
-                                                First=Anish  Second=23
-
-                2) Reading output of a command:
-
-                        for /f "usebackq tokens=1-5 delims=," %%a in (`powershell -command "..."`) do (
-                        rem %%a .. %%e hold tokens
+                        setlocal enabledelayedexpansion
+                        set count=0
+                        for %%x in (a b c) do (
+                                set /a count+=1
+                                echo %count%   :: prints the same old value each iteration (bad)
+                                echo !count!   :: prints 1, then 2, then 3 (good)
                         )
 
-                        - Instead of reading a file, you can read output of a command.
+        3) What is %%i?
+
+                for loop variable.
+
+                - Inside a batch file, you write %%i, %%a, %%x, etc.
+                - At the command prompt (interactive), you use a single % (e.g., %i).
+                - Batch files require %% because % is used for variables inside the script.
+                - CMD (the black window) treats %i as the loop variable directly.
+                        - .bat file → use %%i
+                        - CMD window → use %i
+
+                Example
+
+                        for %%i in (1 2 3) do echo %%i
+
+
+                        This prints:
+
+                                1
+                                2
+                                3
+
+        4) for loop syntax (common forms)
+
+                -> Simple list
+                        for %%i in (apple banana cherry) do (
+                        echo %%i
+                        )
+
+                -> Numeric range (using for /l)
+                        for /l %%n in (1,1,5) do (
+                        echo %%n
+                        )
+
+                        - (start,step,end) — prints 1 2 3 4 5.
+
+                -> Read lines or tokens (for /f)
+
+                        - Useful to parse files or command output.
+
+                                1) Reading file :
+
+                                        for /f "tokens=1,2 delims=," %%a in (data.csv) do (
+                                          echo First=%%a  Second=%%b
+                                        )
+                                        
+                                        - for /f reads text, one line at a time, and splits each line into “words” using delimiters.
+                                        - i.e “Read a line → break it into pieces → store each piece in variables like %%a, %%b, %%c → use them.”
+
+                                        Imagine your data.csv file contains:
+
+                                                Anish,23,India
+                                                Rahul,30,UK
+
+                                        Now, what will for /f do?
+
+                                                Step 1) Read the first line: Anish,23,India
+                                                Step 2) Split using the delimiter ,
+                                                        That means:
+
+                                                                piece 1 → Anish
+                                                                piece 2 → 23
+                                                                piece 3 → India (ignored because we only asked for tokens=1,2)
+
+                                                Step 3) Assign:
+
+                                                        %%a = Anish
+                                                        %%b = 23
+
+                                                Step 4) Inside the loop, this runs:
+                                                        echo First=%%a  Second=%%b
+
+                                                        So output becomes:
+                                                                First=Anish  Second=23
+
+                                2) Reading output of a command:
+
+                                        for /f "usebackq tokens=1-5 delims=," %%a in (`powershell -command "..."`) do (
+                                        rem %%a .. %%e hold tokens
+                                        )
+
+                                        - Instead of reading a file, you can read output of a command.
+
+                                        Example:
+
+                                                for /f "tokens=1,2" %%a in (`echo hello,world`) do (
+                                                echo %%a %%b
+                                                )
+
+                                        What happens?
+
+                                                - Command runs: echo hello,world
+                                                - The output is: hello,world
+
+
+                                                - Then:
+                                                        Split on comma:
+
+                                                                token 1 = hello
+                                                                token 2 = world
+
+                                                - Assigned as:
+
+                                                        %%a = hello
+                                                        %%b = world
+
+                                                - Then inside block: echo hello world
+
+                        - In a for /f loop:
+
+                                - The first variable name you write (%%a) automatically creates the next variables alphabetically:
+
+                                        %%a → first token
+                                        %%b → second token
+                                        %%c → third token
+                                        and so on...
+                
+                                - You do NOT need to declare %%b, %%c, etc.
+                                - They are automatically created when you ask for more tokens.
+
+
+        What is setlocal enabledelayedexpansion?
+
+                - It is a batch-file command that allows you to use variables that update inside loops or inside IF blocks.
+                - Normally, batch files don’t update variable values inside loops unless this feature is turned ON.
+
+
+
+
+        REM: 
+                - REM means remark / comment.
+                - eg: REM Check if FFmpeg is available
+                - This line is only for humans, not executed.
+                - It says: “The next lines will check if FFmpeg is installed.”
+
+        where ffmpeg >nul 2>1
+
+                1) where ffmpeg : 
+                        where ffmpeg asks Windows: “Where is the program called ffmpeg.exe located on this computer?”
+
+
+                        🧠 How Windows answers
+                                ✅ If FFmpeg is installed and added to PATH:
+
+                                        where ffmpeg --> Output: C:\ffmpeg\bin\ffmpeg.exe
+
+                                        This means:
+
+                                                - FFmpeg exists
+                                                - Windows knows where it is
+                                                - You can run ffmpeg from anywhere
+
+                                ❌ If FFmpeg is NOT installed (or not in PATH):
+
+                                        where ffmpeg --> Output: INFO: Could not find files for the given pattern(s).
+
+                                        This means:
+
+                                                - FFmpeg is missing OR Windows cannot find it
+
+
+                        🧠 How Windows actually works
+
+                                - When you type: ffmpeg
+
+                                - Windows internally tries:
+
+                                        ffmpeg.exe
+                                        ffmpeg.bat
+                                        ffmpeg.cmd
+
+                                (based on something called PATHEXT)
+                                        PATHEXT lets Windows know which file extensions it should auto-append when you run a command.
+                                                - Because of PATHEXT, you can type: ffmpeg
+                                                - instead of: ffmpeg.exe
+                                                - Windows automatically checks these extensions: .EXE  .BAT  .CMD  .COM  ...
+
+
+                                So: where ffmpeg
+                                means: “Find any executable named ffmpeg (like ffmpeg.exe) in PATH.”
+
+                                ✅ Both commands work
+                                        where ffmpeg
+                                        and
+                                        where ffmpeg.exe
+
+
+                                ✔️ Both will find FFmpeg
+                                ✔️ Both give the same result
+
+                                Example output: C:\ffmpeg\bin\ffmpeg.exe
+
+                                🏆 Why where ffmpeg is preferred
+
+                                        - Cleaner & standard
+                                        - Works for .exe, .cmd, .bat
+                                        - Matches how users actually run commands (ffmpeg, not ffmpeg.exe)
+
+                                That’s why almost all scripts use: where ffmpeg
+
+
+                2) >nul :
+
+                        🎯 What does >nul mean?
+
+                                >nul means: “Throw away the output. Don’t show it on the screen.”
+
+                3) 2>1
+                        🧠 Break it down
+
+                                > : This symbol means redirect output.
+
+                                nul :  - nul is a special Windows file that acts like a trash bin.
+                                - Anything sent to nul is discarded.
+
+                                🧪 Simple example
+
+                                        echo Hello
+                                        Output: Hello
+
+                                        Now: echo Hello >nul
+                                        Output: (nothing)
+
+                                - Because the output went into nul (trash).
+
+                        🔍 In your FFmpeg check
+                                where ffmpeg >nul
+                                Means: “Run where ffmpeg, but don’t show its output.”
+
+                        - The script only cares whether it succeeded or failed, not what it printed.
+
+                        🚗 Real-life analogy
+
+                                >nul is like: Saying something and throwing it into a dustbin so nobody hears it.
+
+
+                        🎯 What does 2>1 mean?
+
+                                2>1 means: Send error messages (2) to the same place as normal output (1)
+
+                        🧠 First understand the numbers
+
+                                In Windows commands:
+
+                                        Number	Meaning
+                                        1	Normal output (stdout)
+                                        2	Error output (stderr)
+
+                        🧩 Break 2>1 into parts
+
+                                2 → error output
+                                > → redirect
+                                1 → normal output
+
+                                - So: 2>1 means: “Redirect error output to normal output”
+
+                        🧪 Example:
+
+                                dir nofile.txt
+                                Output (error): File Not Found
+
+
+                                Now: dir nofile.txt 2>1
+
+                                        - Error output is redirected to normal output.
+                                        - If normal output is hidden, error output will also be hidden.
+
+                        🔥 Why used with >nul
+
+                                Look at this line: "where ffmpeg >nul 2>1" Step by step:
+
+                                        - >nul → hide normal output
+                                        - 2>1 → send errors to normal output
+                                        - Normal output is already going to nul
+
+                        👉 Result:
+                                Both success messages and error messages are hidden
+
+                        🎯 Final meaning in plain English
+
+                                where ffmpeg >nul 2>1
+                                means: “Check for ffmpeg quietly — don’t show anything, whether it succeeds or fails.”
+
+
+        🎯 Output Channels:
+
+                When a program runs, it can talk to you in two different ways:
+
+                        - Normal messages → “Everything is going fine”
+                        - Error messages → “Something went wrong”
+
+                        Windows keeps these separate.
+
+                                1️⃣ Normal Output (stdout)
+
+                                        stdout = normal output
+
+                                        This is used for:
+
+                                                - Results
+                                                - Success messages
+                                                - Information
+
+                                        Example:
+                                                echo Hello
+                                                Output: Hello
+
+                                                - This goes to stdout.
+
+                                        Another example:
+                                                dir
+                                                Shows list of files — this is normal output.
+
+                                2️⃣ Error Output (stderr)
+
+                                        stderr = error output
+
+                                        This is used for:
+
+                                                - Errors
+                                                - Warnings
+                                                - Problems
+
+                                        Example:
+                                                dir no_such_folder
+                                                Output: The system cannot find the file specified.
+
+                                                - This goes to stderr.
+
+                        🧠 Why are they separate?
+
+                                Because sometimes you want to:
+
+                                        - Save normal results
+                                        - Hide or handle errors differently
 
                         Example:
 
-                                for /f "tokens=1,2" %%a in (`echo hello,world`) do (
-                                echo %%a %%b
-                                )
-
-                        What happens?
-
-                                - Command runs: echo hello,world
-                                - The output is: hello,world
+                                dir C:\Windows > files.txt
 
 
-                                - Then:
-                                        Split on comma:
+                                ✔️ File list goes into files.txt
+                                ❌ Error messages still appear on screen
 
-                                                token 1 = hello
-                                                token 2 = world
+                        🧩 Visual analogy (very easy)
 
-                                - Assigned as:
+                                Think of a program as a person talking:
 
-                                        %%a = hello
-                                        %%b = world
+                                        🗣️ stdout → normal speaking voice
+                                        🚨 stderr → shouting errors
 
-                                - Then inside block: echo hello world
+                                You can choose to:
 
-        - In a for /f loop:
+                                        - Listen to both
+                                        - Mute one
+                                        - Mute both
 
-                - The first variable name you write (%%a) automatically creates the next variables alphabetically:
+                        🎯 How redirection uses them
 
-                        %%a → first token
-                        %%b → second token
-                        %%c → third token
-                        and so on...
- 
-                - You do NOT need to declare %%b, %%c, etc.
-                - They are automatically created when you ask for more tokens.
+                                Command	                What happens
+                                >nul	                hide normal output
+                                2>nul	                hide error output
+                                >nul 2>&1	        hide both
+
+                        ✅ One-line summary
+
+                                - stdout → normal messages
+                                - stderr → error messages
+
+                                - They are separate so scripts can control them independently.
+
+                        🎯 What are stdout and stderr?
+
+                                When a program runs, it has two separate output channels:
+
+                                        stdout → for normal results
+                                        stderr → for errors and warnings
+
+                                - They are like two different pipes for messages.
+
+                                - Both stdout and stderr are sent to the screen (your terminal / CMD window) by default.
+
+                                🧠 Default behavior (no redirection)
+                                        echo Hello
+                                        stdout → screen
+
+                                        dir no_folder
+                                        stderr → screen
+
+                                        - So by default:
+
+                                                Channel	        Goes to
+                                                stdout	        Screen (CMD window)
+                                                stderr	        Screen (CMD window)
+
+                                        - That’s why you normally see both normal messages and error messages printed.
+
+                                🔁 What happens when you redirect?
+
+                                        You can change where they go.
+
+                                                1) Redirect stdout to a file
+
+                                                        dir > files.txt
+
+                                                        stdout → files.txt
+                                                        stderr → screen
+
+                                                2) Redirect stderr to a file
+
+                                                        dir no_folder 2> error.txt
+
+                                                        stderr → error.txt
+                                                        stdout → screen
+
+                                                3) Redirect both to the same place
+
+                                                        dir > all.txt 2>&1
+
+                                                        stdout → all.txt
+                                                        stderr → all.txt
+
+                                                4) Throw them away
+
+                                                        dir >nul 2>&1
+
+                                                        stdout → nul (trash)
+                                                        stderr → nul (trash)
+
+
+
+
+
+        ❓ Is 2>&1 the same as 2>1?
+                ❌ NO — they are NOT the same.
+                ✅ 2>&1 is correct. 2>1 is usually wrong.
+
+                🧠 What 2>&1 actually means
+
+                        - 2>&1 means: Send error output (2) to the same place as normal output (1)
+
+                        - Here:
+
+                                2 = error output (stderr)
+                                1 = normal output (stdout)
+                                & = “this is an output stream, not a file”
+
+                        - So Windows understands: “Redirect errors to wherever normal output is going.”
+
+                ❌ What 2>1 means :
+
+                        - Send error output (2) into a file literally named 1
+                        - ⚠️ Windows thinks 1 is a filename, not stdout.
+
+                        - So it may:
+
+                                - create a file called 1
+                                - write error messages into that file
+                                - That’s not what you want.
+
+                🧪 Example to make it clear
+
+                        Correct way (hide everything):
+
+                                where ffmpeg >nul 2>&1
+
+                                >nul → hide normal output
+                                2>&1 → send errors to same place → also hidden
+
+                        Wrong way:
+
+                                where ffmpeg >nul 2>1
+
+                                This may:
+
+                                        - create a file named 1
+                                        - redirect errors into that file
+
+                🧠 Why & is required
+
+                        > → redirect to a file
+                        >& → redirect to an output stream
+
+                        So:
+
+                                1 without & = filename
+                                1 with & = stdout stream
+
+                        - In this context, & means: “This is a stream (output channel), not a file name.”
+
+                        - Other meanings of & (FYI) :
+
+                                You might also see & used like this: echo Hello & echo World
+
+                                        - Here & means: “Run the next command after this one.”
+                                        - But ⚠️ this is a different use — don’t confuse the two.
+
+                🎯 Final clear summary
+
+                        Syntax	        Meaning	                        Correct?
+                        2>&1	        error → normal output	        ✅ YES
+                        2>1	        error → file named 1	        ❌ NO
+
+                ✅ One-line takeaway
+                        Always use 2>&1, never 2>1, when you want to redirect error output to normal output.
+
 ------------
